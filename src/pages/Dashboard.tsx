@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -40,23 +40,26 @@ interface AiPackage {
   is_active: boolean | null;
 }
 
-const fakeNotifications = [
-  "+9475******28 rented Pro GPU Pack and got 100 bonus credits",
-  "+9493******17 purchased Enterprise AI Suite — Rs 19,000",
-  "+9461******45 earned Rs 345 cashback from GPU Cluster Pack",
-  "+9477******92 withdrew Rs 5,000 successfully",
+// --- Random data generators ---
+const randomPhone = () => {
+  const prefix = ["74", "75", "76", "77", "78", "70", "71", "72"];
+  return `+94${prefix[Math.floor(Math.random() * prefix.length)]}***${String(Math.floor(Math.random() * 900) + 100)}`;
+};
+const randomAmount = (min: number, max: number) =>
+  Math.round((Math.floor(Math.random() * (max - min + 1)) + min) / 50) * 50;
+
+const marqueeTemplates = [
+  (p: string, a: number) => `${p} withdrew Rs.${a.toLocaleString()} successfully ✅`,
+  (p: string, a: number) => `${p} deposited Rs.${a.toLocaleString()} via bank transfer`,
+  (p: string, a: number) => `${p} received Rs.${a.toLocaleString()} bonus credits 🎁`,
+  (p: string, a: number) => `${p} rented AI Pack and earned Rs.${a.toLocaleString()} cashback`,
+  (p: string, a: number) => `${p} purchased GPU Package — Rs.${a.toLocaleString()}`,
 ];
 
-const fakeLivePayouts = [
-  { user: "+9477***123", amount: 2500, time: "just now" },
-  { user: "+9471***456", amount: 5000, time: "2 min ago" },
-  { user: "+9476***789", amount: 1200, time: "5 min ago" },
-  { user: "+9470***321", amount: 8500, time: "8 min ago" },
-  { user: "+9478***654", amount: 3200, time: "12 min ago" },
-  { user: "+9474***987", amount: 15000, time: "15 min ago" },
-  { user: "+9472***111", amount: 750, time: "18 min ago" },
-  { user: "+9479***222", amount: 4300, time: "22 min ago" },
-];
+const generateMarqueeMsg = () => {
+  const tpl = marqueeTemplates[Math.floor(Math.random() * marqueeTemplates.length)];
+  return tpl(randomPhone(), randomAmount(500, 25000));
+};
 
 const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
 
@@ -76,8 +79,8 @@ const Dashboard = () => {
   const [referralCode, setReferralCode] = useState("");
   const [commissionTotal, setCommissionTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [payoutIndex, setPayoutIndex] = useState(0);
-  const payoutRef = useRef<HTMLDivElement>(null);
+  const [marqueeMsg, setMarqueeMsg] = useState(() => generateMarqueeMsg());
+  const [livePayouts, setLivePayouts] = useState<{ user: string; amount: number; key: number }[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -98,12 +101,37 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  // Live payout auto-scroll
+  // Marquee rotation with realistic delays
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPayoutIndex((prev) => (prev + 1) % fakeLivePayouts.length);
-    }, 2500);
+    const rotate = () => {
+      setMarqueeMsg(generateMarqueeMsg());
+    };
+    const interval = setInterval(rotate, 4000 + Math.random() * 3000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Live payouts: add one at a time with random delays, never repeat
+  useEffect(() => {
+    let keyCounter = 0;
+    const addPayout = () => {
+      const newItem = { user: randomPhone(), amount: randomAmount(500, 20000), key: keyCounter++ };
+      setLivePayouts((prev) => [newItem, ...prev.slice(0, 19)]); // keep max 20
+    };
+    // Seed initial items with staggered timing
+    const seedTimeouts: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < 4; i++) {
+      seedTimeouts.push(setTimeout(() => addPayout(), i * (1500 + Math.random() * 2000)));
+    }
+    // Ongoing additions
+    const schedule = () => {
+      const delay = 3000 + Math.random() * 5000;
+      return setTimeout(() => {
+        addPayout();
+        timerRef = schedule();
+      }, delay);
+    };
+    let timerRef = setTimeout(() => { timerRef = schedule(); }, 10000);
+    return () => { seedTimeouts.forEach(clearTimeout); clearTimeout(timerRef); };
   }, []);
 
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
@@ -144,8 +172,8 @@ const Dashboard = () => {
       <div className="bg-primary/10 overflow-hidden h-8 flex items-center gap-2 px-3">
         <Megaphone className="w-4 h-4 text-primary flex-shrink-0" />
         <div className="overflow-hidden flex-1">
-          <div className="animate-scroll-left whitespace-nowrap text-xs text-primary font-medium">
-            🎉 {fakeNotifications[Math.floor(Date.now() / 10000) % fakeNotifications.length]}
+          <div key={marqueeMsg} className="animate-scroll-left whitespace-nowrap text-xs text-primary font-medium">
+            🎉 {marqueeMsg}
           </div>
         </div>
       </div>
@@ -341,13 +369,9 @@ const Dashboard = () => {
         <div>
           <h2 className="text-base font-heading font-bold text-foreground mb-3">Live Withdrawals</h2>
           <div className="bg-card rounded-2xl shadow-neu overflow-hidden h-[150px] relative">
-            <div
-              ref={payoutRef}
-              className="transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateY(-${payoutIndex * 38}px)` }}
-            >
-              {[...fakeLivePayouts, ...fakeLivePayouts].map((p, i) => (
-                <div key={i} className="flex items-center justify-between px-4 h-[38px] border-b border-border/50 last:border-0">
+            <div className="divide-y divide-border/50">
+              {livePayouts.map((p) => (
+                <div key={p.key} className="flex items-center justify-between px-4 h-[38px] animate-fade-in">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                     <span>User {p.user} withdrew</span>
@@ -364,19 +388,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══════ INVITE BANNER ═══════ */}
-        <div className="gradient-commission rounded-2xl p-5 text-primary-foreground">
-          <h2 className="text-base font-heading font-bold mb-1">Invite & Earn</h2>
-          <p className="text-sm opacity-80 mb-3">Invite friends and earn up to 12% commission on every package they buy.</p>
-          <Button
-            onClick={copyLink}
-            className="w-full rounded-xl h-12 bg-card/20 hover:bg-card/30 text-primary-foreground font-semibold text-sm backdrop-blur-sm border border-primary-foreground/20"
-          >
-            <Users className="w-4 h-4 mr-2" />
-            Copy Invitation Link
-          </Button>
-        </div>
-
         <div className="h-4" />
       </div>
 
@@ -385,9 +396,10 @@ const Dashboard = () => {
         href="https://wa.me/94700000000"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-success shadow-lg flex items-center justify-center animate-pulse hover:scale-110 transition-transform"
+        className="fixed bottom-[5.5rem] right-4 z-[60] w-14 h-14 rounded-full bg-[hsl(142,71%,45%)] shadow-[0_4px_14px_rgba(37,211,102,0.5)] flex items-center justify-center hover:scale-110 transition-transform"
+        style={{ position: "fixed" }}
       >
-        <MessageCircle className="w-7 h-7 text-success-foreground" />
+        <MessageCircle className="w-7 h-7 text-white animate-pulse" />
       </a>
     </div>
   );
