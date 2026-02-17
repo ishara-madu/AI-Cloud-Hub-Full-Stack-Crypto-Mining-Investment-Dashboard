@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Image, Loader2, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Trash2, Upload, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const AdminSliders = () => {
@@ -16,6 +16,8 @@ const AdminSliders = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ title: "", subtitle: "", gradient: "from-yellow-500 via-red-500 to-orange-500", sort_order: "0" });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const gradientOptions = [
     "from-yellow-500 via-red-500 to-orange-500",
@@ -34,19 +36,41 @@ const AdminSliders = () => {
 
   useEffect(() => { fetchBanners(); }, []);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5MB"); return; }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   const handleAdd = async () => {
     if (!form.title.trim()) { toast.error("Title required"); return; }
     setSaving(true);
+
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      const ext = imageFile.name.split(".").pop();
+      const path = `banners/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("uploads").upload(path, imageFile);
+      if (upErr) { toast.error("Failed to upload image"); setSaving(false); return; }
+      const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(path);
+      imageUrl = urlData.publicUrl;
+    }
+
     const { error } = await supabase.from("slider_banners").insert({
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || null,
       gradient: form.gradient,
       sort_order: parseInt(form.sort_order) || 0,
+      image_url: imageUrl,
     });
     setSaving(false);
     if (error) { toast.error("Failed to add banner"); return; }
     toast.success("Banner added!");
     setForm({ title: "", subtitle: "", gradient: gradientOptions[0], sort_order: "0" });
+    setImageFile(null);
+    setImagePreview(null);
     setShowAdd(false);
     fetchBanners();
   };
@@ -82,8 +106,29 @@ const AdminSliders = () => {
           <CardContent className="p-4 space-y-3">
             <div className="space-y-1"><Label className="text-xs">Title *</Label><Input className="rounded-xl h-9" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. New User Bonus!" /></div>
             <div className="space-y-1"><Label className="text-xs">Subtitle</Label><Input className="rounded-xl h-9" value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} placeholder="e.g. Get Rs.100 Free" /></div>
+            
+            {/* Image Upload */}
             <div className="space-y-1">
-              <Label className="text-xs">Gradient</Label>
+              <Label className="text-xs">Banner Image (optional, overrides gradient)</Label>
+              {imagePreview ? (
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img src={imagePreview} alt="Banner preview" className="w-full h-24 object-cover" />
+                  <button onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-destructive/90 text-destructive-foreground flex items-center justify-center">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <label className="border-2 border-dashed border-border rounded-xl p-3 text-center cursor-pointer hover:border-primary/40 transition-colors block">
+                  <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Upload className="w-4 h-4" /> Upload Image
+                  </div>
+                </label>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Gradient (fallback if no image)</Label>
               <div className="grid grid-cols-3 gap-2">
                 {gradientOptions.map((g) => (
                   <button key={g} onClick={() => setForm({ ...form, gradient: g })}
@@ -102,15 +147,27 @@ const AdminSliders = () => {
       <div className="space-y-3">
         {banners.map((b) => (
           <Card key={b.id} className="shadow-neu overflow-hidden">
-            <div className={`h-16 bg-gradient-to-r ${b.gradient} flex items-center justify-center p-3`}>
-              <div className="text-white text-center">
-                <p className="text-sm font-bold">{b.title}</p>
-                {b.subtitle && <p className="text-[10px] opacity-80">{b.subtitle}</p>}
+            {b.image_url ? (
+              <div className="h-20 relative">
+                <img src={b.image_url} alt={b.title} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center p-3">
+                  <div className="text-white text-center">
+                    <p className="text-sm font-bold">{b.title}</p>
+                    {b.subtitle && <p className="text-[10px] opacity-80">{b.subtitle}</p>}
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className={`h-16 bg-gradient-to-r ${b.gradient} flex items-center justify-center p-3`}>
+                <div className="text-white text-center">
+                  <p className="text-sm font-bold">{b.title}</p>
+                  {b.subtitle && <p className="text-[10px] opacity-80">{b.subtitle}</p>}
+                </div>
+              </div>
+            )}
             <CardContent className="p-3 flex items-center justify-between">
               <div className="text-xs text-muted-foreground">
-                Order: {b.sort_order}
+                Order: {b.sort_order} {b.image_url && "• 🖼 Image"}
               </div>
               <div className="flex items-center gap-2">
                 <Switch checked={b.is_active} onCheckedChange={() => handleToggle(b.id, b.is_active)} />

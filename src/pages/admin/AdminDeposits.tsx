@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Clock } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Image } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const statusColor: Record<string, string> = {
@@ -19,6 +19,7 @@ const AdminDeposits = () => {
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [viewSlip, setViewSlip] = useState<string | null>(null);
 
   const fetchDeposits = async () => {
     const [depsRes, profilesRes] = await Promise.all([
@@ -49,20 +50,17 @@ const AdminDeposits = () => {
         user_id: userId, type: "deposit", amount, status: "approved",
         description: "Deposit approved by admin", reference_id: id,
       });
-      // Notify user - approved
       await supabase.from("notifications").insert({
         user_id: userId, type: "money",
         title: "Deposit Approved ✅",
         description: `Your deposit of Rs ${amount.toLocaleString()} has been approved and credited to your wallet.`,
       });
     } else {
-      // Notify user - rejected
       await supabase.from("notifications").insert({
         user_id: userId, type: "money",
         title: "Deposit Rejected ❌",
         description: `Your deposit request of Rs ${amount.toLocaleString()} has been rejected. Please contact support for details.`,
       });
-      // Decrease credit score by 5
       const { data: profile } = await supabase.from("profiles").select("credit_score").eq("user_id", userId).maybeSingle();
       if (profile) {
         await supabase.from("profiles").update({ credit_score: Math.max(0, (profile.credit_score || 100) - 5) }).eq("user_id", userId);
@@ -85,6 +83,19 @@ const AdminDeposits = () => {
 
       {deposits.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No deposit requests</p>}
 
+      {/* Slip viewer modal */}
+      {viewSlip && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" onClick={() => setViewSlip(null)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setViewSlip(null)} className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+            <img src={viewSlip} alt="Payment slip" className="w-full rounded-2xl shadow-lg" />
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {deposits.map((d) => (
           <Card key={d.id} className="shadow-neu">
@@ -105,6 +116,14 @@ const AdminDeposits = () => {
                 <span>Method: {d.payment_method}</span>
                 {d.notes && <span className="ml-3">Note: {d.notes}</span>}
               </div>
+              {d.slip_url && (
+                <button
+                  onClick={() => setViewSlip(d.slip_url)}
+                  className="flex items-center gap-1.5 text-xs text-primary font-medium mb-2 hover:underline"
+                >
+                  <Image className="w-3.5 h-3.5" /> View Payment Slip
+                </button>
+              )}
               {d.status === "pending" && (
                 <div className="flex gap-2">
                   <Button size="sm" className="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white" disabled={processing === d.id} onClick={() => handleAction(d.id, d.user_id, Number(d.amount), "approved")}>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, ArrowLeft, Building2, Copy, Camera, Upload } from "lucide-react";
+import { Loader2, CheckCircle2, ArrowLeft, Building2, Copy, Camera, Upload, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Deposit = () => {
@@ -14,10 +14,24 @@ const Deposit = () => {
   const [reference, setReference] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const copyAccount = () => {
     navigator.clipboard.writeText("82001567XX");
     toast.success("Account number copied!");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Max 5MB.");
+      return;
+    }
+    setSlipFile(file);
+    setSlipPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,9 +41,29 @@ const Deposit = () => {
     if (!user) return;
     setLoading(true);
 
+    let slipUrl: string | null = null;
+
+    // Upload slip if provided
+    if (slipFile) {
+      setUploading(true);
+      const ext = slipFile.name.split(".").pop();
+      const path = `slips/${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("uploads").upload(path, slipFile);
+      if (uploadErr) {
+        toast.error("Failed to upload payment slip");
+        setLoading(false);
+        setUploading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(path);
+      slipUrl = urlData.publicUrl;
+      setUploading(false);
+    }
+
     const { error: depErr } = await supabase.from("deposit_requests").insert({
       user_id: user.id, amount: amt, payment_method: "bank_transfer" as const,
       notes: reference.trim() || null,
+      slip_url: slipUrl,
     });
 
     if (!depErr) {
@@ -37,7 +71,6 @@ const Deposit = () => {
         user_id: user.id, type: "deposit" as const, amount: amt, status: "pending" as const,
         description: `Deposit via Bank Transfer${reference ? ` - ${reference}` : ""}`,
       });
-      // Create notification
       await supabase.from("notifications").insert({
         user_id: user.id, type: "money",
         title: "Deposit Request Submitted",
@@ -58,7 +91,7 @@ const Deposit = () => {
           </div>
           <h2 className="text-xl font-heading font-bold text-foreground">Deposit Request Submitted</h2>
           <p className="text-sm text-muted-foreground">Your deposit of <strong>Rs {parseFloat(amount).toFixed(2)}</strong> is pending approval.</p>
-          <Button onClick={() => { setSubmitted(false); setAmount(""); setReference(""); }} variant="outline" className="rounded-xl">
+          <Button onClick={() => { setSubmitted(false); setAmount(""); setReference(""); setSlipFile(null); setSlipPreview(null); }} variant="outline" className="rounded-xl">
             Make Another Deposit
           </Button>
         </div>
@@ -143,21 +176,38 @@ const Deposit = () => {
           </div>
 
           {/* File Upload Zone */}
-          <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center bg-muted/20 cursor-pointer hover:border-primary/40 transition-colors">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Camera className="w-6 h-6 text-primary" />
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Upload Payment Slip</Label>
+            {slipPreview ? (
+              <div className="relative rounded-2xl overflow-hidden border border-border">
+                <img src={slipPreview} alt="Payment slip" className="w-full max-h-48 object-contain bg-muted/20" />
+                <button
+                  type="button"
+                  onClick={() => { setSlipFile(null); setSlipPreview(null); }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-destructive/90 text-destructive-foreground flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <p className="text-sm text-muted-foreground">Upload Payment Slip</p>
-              <p className="text-xs text-muted-foreground">(රිසිට්පත මෙතැනට දමන්න)</p>
-              <Upload className="w-4 h-4 text-muted-foreground" />
-            </div>
+            ) : (
+              <label className="border-2 border-dashed border-border rounded-2xl p-6 text-center bg-muted/20 cursor-pointer hover:border-primary/40 transition-colors block">
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-primary" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Tap to upload payment slip</p>
+                  <p className="text-xs text-muted-foreground">(රිසිට්පත මෙතැනට දමන්න)</p>
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </label>
+            )}
           </div>
 
           {/* Submit */}
-          <Button type="submit" className="w-full rounded-xl h-12 gradient-primary text-primary-foreground font-semibold text-base" disabled={loading}>
-            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Confirm Deposit
+          <Button type="submit" className="w-full rounded-xl h-12 gradient-primary text-primary-foreground font-semibold text-base" disabled={loading || uploading}>
+            {(loading || uploading) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {uploading ? "Uploading Slip..." : "Confirm Deposit"}
           </Button>
 
           {/* Warning */}
