@@ -423,6 +423,9 @@ const AdminDashboard = () => {
         <Link to="/admin/withdrawals"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><ArrowUpFromLine className="w-4 h-4 mr-2" />Withdrawals</Button></Link>
         <Link to="/admin/redeem-codes"><Button variant="outline" className="w-full h-14 rounded-xl text-sm">🎫 Redeem Codes</Button></Link>
         <Link to="/admin/sliders"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><ImageIcon className="w-4 h-4 mr-2" />Sliders</Button></Link>
+        <Link to="/admin/user-packages"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><Package className="w-4 h-4 mr-2" />User Pkgs</Button></Link>
+        <Link to="/admin/settings"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><Settings className="w-4 h-4 mr-2" />Settings</Button></Link>
+        <Link to="/admin/alerts"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><ShieldAlert className="w-4 h-4 mr-2" />Alerts</Button></Link>
       </div>
     </div>
   );

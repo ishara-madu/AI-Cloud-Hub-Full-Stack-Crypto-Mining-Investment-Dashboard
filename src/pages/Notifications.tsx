@@ -51,7 +51,6 @@ const Notifications = () => {
     if (!user || notifications.length === 0) return;
     setClearing(true);
     const ids = notifications.map(n => n.id);
-    // Delete in batches
     for (let i = 0; i < ids.length; i += 20) {
       const batch = ids.slice(i, i + 20);
       await supabase.from("notifications").delete().in("id", batch);
@@ -106,7 +105,7 @@ const Notifications = () => {
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5 line-clamp-1">{n.description}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5 line-clamp-2">{n.description || "Tap to view details"}</p>
               </div>
             </div>
           </button>
@@ -138,7 +137,7 @@ const Notifications = () => {
               </button>
             </div>
             <div className="border-t border-border pt-3">
-              <p className="text-sm text-foreground leading-relaxed">{selected.description}</p>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{selected.description || "No additional details available."}</p>
             </div>
             <p className="text-[10px] text-muted-foreground">
               {new Date(selected.created_at).toLocaleString()}
