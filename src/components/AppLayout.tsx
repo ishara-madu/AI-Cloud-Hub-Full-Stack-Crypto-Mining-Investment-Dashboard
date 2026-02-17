@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,6 +24,16 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [vipLevel, setVipLevel] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("wallets").select("total_deposited").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      const deposited = data?.total_deposited ? Number(data.total_deposited) : 0;
+      const thresholds = [0, 1000, 5000, 15000, 50000, 100000];
+      setVipLevel(thresholds.filter((t) => deposited >= t).length - 1);
+    });
+  }, [user]);
 
   const maskedEmail = user?.email
     ? user.email.split("@")[0].slice(0, 3) + "***@" + user.email.split("@")[1]
@@ -41,7 +52,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 <User className="w-5 h-5 text-muted-foreground" />
               </div>
               <span className="text-sm font-medium text-foreground">{maskedEmail}</span>
-              <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[10px] px-1.5 py-0 font-bold">VIP 0</Badge>
+              <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[10px] px-1.5 py-0 font-bold">VIP {vipLevel}</Badge>
             </div>
             <button
               onClick={() => setShowNotifs(true)}

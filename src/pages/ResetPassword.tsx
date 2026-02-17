@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Zap } from "lucide-react";
+import { Loader2, Cloud } from "lucide-react";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -58,9 +58,9 @@ const ResetPassword = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary-foreground" />
+              <Cloud className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-heading font-bold text-foreground">NexusAI</span>
+            <span className="text-2xl font-heading font-bold text-foreground">AICloudHub</span>
           </div>
         </div>
         <Card className="shadow-card border-border/50">
