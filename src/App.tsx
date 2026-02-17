@@ -18,11 +18,21 @@ import Transactions from "./pages/Transactions";
 import Team from "./pages/Team";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminDeposits from "./pages/admin/AdminDeposits";
+import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
+import AdminPackages from "./pages/admin/AdminPackages";
 
 const queryClient = new QueryClient();
 
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute><AppLayout>{children}</AppLayout></ProtectedRoute>
+);
+
+const AdminPage = ({ children }: { children: React.ReactNode }) => (
+  <AdminLayout>{children}</AdminLayout>
 );
 
 const App = () => (
@@ -45,6 +55,12 @@ const App = () => (
             <Route path="/transactions" element={<ProtectedPage><Transactions /></ProtectedPage>} />
             <Route path="/team" element={<ProtectedPage><Team /></ProtectedPage>} />
             <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
+            <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
+            <Route path="/admin/deposits" element={<AdminPage><AdminDeposits /></AdminPage>} />
+            <Route path="/admin/withdrawals" element={<AdminPage><AdminWithdrawals /></AdminPage>} />
+            <Route path="/admin/packages" element={<AdminPage><AdminPackages /></AdminPage>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
