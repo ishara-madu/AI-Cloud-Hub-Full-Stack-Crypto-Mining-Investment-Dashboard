@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ const Packages = () => {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [searchParams] = useSearchParams();
+  const myPackagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,6 +58,15 @@ const Packages = () => {
     fetchData();
   }, [user]);
 
+  // Auto-scroll to My Packages if requested
+  useEffect(() => {
+    if (!loading && searchParams.get("section") === "my-packages" && myPackagesRef.current) {
+      setTimeout(() => {
+        myPackagesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [loading, searchParams]);
+
   const handleBuy = async (pkg: AiPackage) => {
     if (!user) return;
     const price = pkg.price_onetime || pkg.price_monthly || 0;
@@ -67,7 +79,6 @@ const Packages = () => {
     if (!error) {
       await supabase.from("wallets").update({ balance: bal - price }).eq("user_id", user.id);
       await supabase.from("transactions").insert({ user_id: user.id, type: "purchase" as const, amount: price, status: "approved" as const, description: `Purchased ${pkg.name}` });
-      // Notification for purchase
       await supabase.from("notifications").insert({
         user_id: user.id, type: "money",
         title: "Package Purchased",
@@ -182,7 +193,7 @@ const Packages = () => {
 
         {/* My Packages */}
         {userPackages.length > 0 && (
-          <div className="mt-6">
+          <div className="mt-6" ref={myPackagesRef} id="my-packages">
             <h2 className="text-base font-heading font-bold text-foreground mb-3">📦 My Active Packages</h2>
             <div className="space-y-3">
               {userPackages.map((up) => {

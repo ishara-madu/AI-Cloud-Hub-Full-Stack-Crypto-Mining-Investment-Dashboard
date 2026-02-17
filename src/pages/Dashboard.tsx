@@ -149,34 +149,43 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  // Marquee rotation with realistic delays
+  // Marquee rotation with realistic low-traffic delays (15-45 seconds)
   useEffect(() => {
     const rotate = () => {
       setMarqueeMsg(generateMarqueeMsg());
     };
-    const interval = setInterval(rotate, 4000 + Math.random() * 3000);
-    return () => clearInterval(interval);
+    const schedule = () => {
+      const delay = 15000 + Math.random() * 30000; // 15-45 seconds
+      return setTimeout(() => {
+        rotate();
+        timerRef = schedule();
+      }, delay);
+    };
+    let timerRef = schedule();
+    return () => clearTimeout(timerRef);
   }, []);
 
-  // Live payouts: add one at a time with random delays, never repeat
+  // Live payouts: slow realistic pace for low-traffic site
   useEffect(() => {
     let keyCounter = 0;
     const addPayout = () => {
       const newItem = { user: randomEmail(), amount: randomAmount(500, 20000), key: keyCounter++ };
       setLivePayouts((prev) => [newItem, ...prev.slice(0, 19)]);
     };
+    // Seed 3 initial items slowly
     const seedTimeouts: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < 4; i++) {
-      seedTimeouts.push(setTimeout(() => addPayout(), i * (1500 + Math.random() * 2000)));
+    for (let i = 0; i < 3; i++) {
+      seedTimeouts.push(setTimeout(() => addPayout(), i * 3000));
     }
-    const schedule = () => {
-      const delay = 3000 + Math.random() * 5000;
+    // Then add new ones every 20-60 seconds
+    const schedule = (): ReturnType<typeof setTimeout> => {
+      const delay = 20000 + Math.random() * 40000;
       return setTimeout(() => {
         addPayout();
         timerRef = schedule();
       }, delay);
     };
-    let timerRef = setTimeout(() => { timerRef = schedule(); }, 10000);
+    let timerRef = setTimeout(() => { timerRef = schedule(); }, 12000);
     return () => { seedTimeouts.forEach(clearTimeout); clearTimeout(timerRef); };
   }, []);
 
@@ -330,7 +339,7 @@ const Dashboard = () => {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-heading font-bold text-foreground">📦 My Packages</h2>
-              <Link to="/packages" className="text-xs text-primary font-medium flex items-center gap-0.5">
+              <Link to="/packages?section=my-packages" className="text-xs text-primary font-medium flex items-center gap-0.5">
                 View All <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
@@ -485,21 +494,23 @@ const Dashboard = () => {
         <div>
           <h2 className="text-base font-heading font-bold text-foreground mb-3">Live Withdrawals</h2>
           <div className="bg-card rounded-2xl shadow-neu overflow-hidden h-[150px] relative">
-            <div className="divide-y divide-border/50">
-              {livePayouts.map((p) => (
-                <div key={p.key} className="flex items-center justify-between px-4 h-[38px] animate-fade-in">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                    <span>{p.user} withdrew</span>
+            <div className="absolute inset-0 overflow-y-auto scrollbar-hide">
+              <div className="divide-y divide-border/50">
+                {livePayouts.map((p) => (
+                  <div key={p.key} className="flex items-center justify-between px-4 h-[38px] animate-fade-in">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                      <span>{p.user} withdrew</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-success">Rs.{p.amount.toLocaleString()}</span>
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-success/30 text-success">
+                        Success
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-success">Rs.{p.amount.toLocaleString()}</span>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-success/30 text-success">
-                      Success
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
