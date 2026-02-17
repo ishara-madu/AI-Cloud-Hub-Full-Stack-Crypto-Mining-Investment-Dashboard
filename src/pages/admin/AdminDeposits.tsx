@@ -61,6 +61,50 @@ const AdminDeposits = () => {
         title: "Deposit Approved ✅",
         description: `Your deposit of Rs ${amount.toLocaleString()} has been approved and credited to your wallet.`,
       });
+
+      // Distribute referral commissions
+      try {
+        const { data: comRates } = await supabase.from("platform_settings").select("value").eq("key", "commission_rates").maybeSingle();
+        const rates = comRates?.value as { level_1?: number; level_2?: number; level_3?: number } | null;
+        if (rates) {
+          const { data: referrals } = await supabase.from("referrals").select("referrer_id, tier").eq("referred_id", userId);
+          if (referrals) {
+            for (const ref of referrals) {
+              const rate = ref.tier === 1 ? (rates.level_1 || 0) : ref.tier === 2 ? (rates.level_2 || 0) : (rates.level_3 || 0);
+              if (rate <= 0) continue;
+              const commAmount = (amount * rate) / 100;
+
+              // Insert commission record
+              await supabase.from("commissions").insert({
+                user_id: ref.referrer_id, amount: commAmount, tier: ref.tier,
+                from_user_id: userId, source_type: "deposit", source_id: id,
+              });
+
+              // Credit referrer wallet
+              const { data: rWallet } = await supabase.from("wallets").select("balance, total_commission").eq("user_id", ref.referrer_id).maybeSingle();
+              if (rWallet) {
+                await supabase.from("wallets").update({
+                  balance: Number(rWallet.balance) + commAmount,
+                  total_commission: Number(rWallet.total_commission) + commAmount,
+                }).eq("user_id", ref.referrer_id);
+              }
+
+              // Commission transaction
+              await supabase.from("transactions").insert({
+                user_id: ref.referrer_id, type: "commission", amount: commAmount, status: "approved",
+                description: `Tier ${ref.tier} commission from deposit`, reference_id: id,
+              });
+
+              // Notify referrer
+              await supabase.from("notifications").insert({
+                user_id: ref.referrer_id, type: "money",
+                title: "Commission Earned 🎉",
+                description: `You earned Rs ${commAmount.toLocaleString()} (Tier ${ref.tier}) from a team member's deposit.`,
+              });
+            }
+          }
+        }
+      } catch (e) { console.error("Commission distribution error:", e); }
     } else {
       // Update existing pending transaction to rejected
       await supabase.from("transactions").update({ status: "rejected", description: "Deposit rejected by admin" })
