@@ -158,8 +158,9 @@ const AdminUsers = () => {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       toast.success("User deleted successfully");
+      // Remove from list immediately
+      setUsers(prev => prev.filter(u => u.user_id !== deleteUserId));
       setDeleteUserId(null);
-      fetchUsers();
     } catch (err: any) {
       toast.error(err.message || "Failed to delete user");
     }

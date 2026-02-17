@@ -64,11 +64,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Delete related data first
+    // Delete related data first — order matters for FK constraints
     await supabaseAdmin.from("notifications").delete().eq("user_id", user_id);
     await supabaseAdmin.from("device_logs").delete().eq("user_id", user_id);
     await supabaseAdmin.from("daily_signins").delete().eq("user_id", user_id);
+    // Delete commissions where user earned OR was the source
     await supabaseAdmin.from("commissions").delete().eq("user_id", user_id);
+    await supabaseAdmin.from("commissions").delete().eq("from_user_id", user_id);
     await supabaseAdmin.from("referrals").delete().or(`referrer_id.eq.${user_id},referred_id.eq.${user_id}`);
     await supabaseAdmin.from("redeem_code_uses").delete().eq("user_id", user_id);
     await supabaseAdmin.from("user_packages").delete().eq("user_id", user_id);
@@ -78,6 +80,8 @@ Deno.serve(async (req) => {
     await supabaseAdmin.from("bank_accounts").delete().eq("user_id", user_id);
     await supabaseAdmin.from("wallets").delete().eq("user_id", user_id);
     await supabaseAdmin.from("user_roles").delete().eq("user_id", user_id);
+    // Clear referred_by references before deleting profile
+    await supabaseAdmin.from("profiles").update({ referred_by: null }).eq("referred_by", user_id);
     await supabaseAdmin.from("profiles").delete().eq("user_id", user_id);
 
     // Delete auth user (this also invalidates all sessions/tokens)
