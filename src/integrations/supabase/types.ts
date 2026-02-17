@@ -119,6 +119,30 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_signins: {
+        Row: {
+          created_at: string
+          id: string
+          reward_amount: number
+          signed_in_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reward_amount?: number
+          signed_in_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reward_amount?: number
+          signed_in_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       deposit_requests: {
         Row: {
           amount: number
@@ -152,12 +176,44 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
+          credit_score: number
           display_name: string | null
           id: string
+          is_frozen: boolean
           phone: string | null
           referral_code: string | null
           referred_by: string | null
@@ -167,8 +223,10 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          credit_score?: number
           display_name?: string | null
           id?: string
+          is_frozen?: boolean
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -178,13 +236,77 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          credit_score?: number
           display_name?: string | null
           id?: string
+          is_frozen?: boolean
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      redeem_code_uses: {
+        Row: {
+          code_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redeem_code_uses_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "redeem_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redeem_codes: {
+        Row: {
+          code: string
+          created_at: string
+          current_uses: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number
+          reward_amount: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_uses?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          reward_amount?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_uses?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          reward_amount?: number
         }
         Relationships: []
       }
@@ -209,6 +331,36 @@ export type Database = {
           referred_id?: string
           referrer_id?: string
           tier?: number
+        }
+        Relationships: []
+      }
+      slider_banners: {
+        Row: {
+          created_at: string
+          gradient: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          subtitle: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          gradient?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          gradient?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
         }
         Relationships: []
       }
