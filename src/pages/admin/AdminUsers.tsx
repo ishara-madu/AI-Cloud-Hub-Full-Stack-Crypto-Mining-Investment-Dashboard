@@ -116,16 +116,11 @@ const AdminUsers = () => {
     setBanDialog({ users: targets, mode: "bulk", currentIndex: 0 });
   };
 
-  const handleDecreaseCreditScore = async (userId: string, currentScore: number) => {
-    const decrease = Math.max(1, Math.round(currentScore * 0.10));
-    const newScore = Math.max(0, currentScore - decrease);
-    await supabase.from("profiles").update({ credit_score: newScore }).eq("user_id", userId);
-    await supabase.from("notifications").insert({
-      user_id: userId, type: "security",
-      title: "Credit Score Decreased",
-      description: `Your credit score has been decreased by ${decrease}% to ${newScore}%. Please maintain good account behavior.`,
-    });
-    toast.success(`Credit score: ${currentScore}% → ${newScore}% (-${decrease}%)`);
+  const handleDecreaseBalance = async (userId: string, currentBalance: number) => {
+    const newBal = Math.max(0, currentBalance - 10);
+    const { error } = await supabase.from("wallets").update({ balance: newBal }).eq("user_id", userId);
+    if (error) { toast.error("Failed to update balance"); return; }
+    toast.success(`Balance: Rs ${currentBalance} → Rs ${newBal} (-10)`);
     fetchUsers();
   };
 
@@ -244,8 +239,8 @@ const AdminUsers = () => {
                     <Button size="sm" variant={u.is_frozen ? "default" : "destructive"} className="flex-1 rounded-xl text-xs" onClick={() => handleToggleFreeze(u.user_id, u.is_frozen)}>
                       {u.is_frozen ? <><ShieldCheck className="w-3 h-3 mr-1" />Unfreeze</> : <><ShieldAlert className="w-3 h-3 mr-1" />Ban/Freeze</>}
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1 rounded-xl text-xs border-destructive text-destructive" onClick={() => handleDecreaseCreditScore(u.user_id, u.credit_score)}>
-                      Credit -10
+                    <Button size="sm" variant="outline" className="flex-1 rounded-xl text-xs border-destructive text-destructive" onClick={() => handleDecreaseBalance(u.user_id, u.wallet?.balance ?? 0)}>
+                      Balance -10
                     </Button>
                     <Button size="sm" variant={u.role === "admin" ? "outline" : "secondary"} className="flex-1 rounded-xl text-xs"
                       onClick={async () => {
