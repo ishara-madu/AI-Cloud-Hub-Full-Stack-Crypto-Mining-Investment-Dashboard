@@ -54,35 +54,18 @@ const DailySignIn = () => {
 
     const todayStr = new Date().toISOString().split("T")[0];
 
-    const { error } = await supabase.from("daily_signins").insert({
-      user_id: user.id,
-      signed_in_date: todayStr,
-      reward_amount: 10,
-    });
-
+    const { data, error } = await supabase.rpc("daily_checkin");
     if (error) {
-      if (error.code === "23505") {
-        toast.error("Already signed in today!");
-      } else {
-        toast.error("Failed to sign in");
-      }
+      toast.error("Failed to sign in");
       setChecking(false);
       return;
     }
-
-    // Add Rs 10 to wallet
-    const { data: wallet } = await supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle();
-    if (wallet) {
-      await supabase.from("wallets").update({ balance: Number(wallet.balance) + 10 }).eq("user_id", user.id);
+    const result = data as any;
+    if (!result?.success) {
+      toast.error(result?.error || "Check-in failed");
+      setChecking(false);
+      return;
     }
-
-    // Create notification
-    await supabase.from("notifications").insert({
-      user_id: user.id,
-      type: "money",
-      title: "Daily Sign-In Reward",
-      description: "You received Rs 10 for your daily check-in. Keep your streak going!",
-    });
 
     setCheckedIn(true);
     setWeekSignins([...weekSignins, todayStr]);

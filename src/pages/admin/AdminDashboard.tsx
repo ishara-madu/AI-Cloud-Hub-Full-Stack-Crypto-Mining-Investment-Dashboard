@@ -17,6 +17,7 @@ import {
   PieChart as RechartsPie, Pie, Cell,
 } from "recharts";
 import { toast } from "sonner";
+import AdminNotificationBell from "@/components/AdminNotificationBell";
 
 const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--destructive))", "hsl(142, 76%, 36%)", "hsl(45, 93%, 47%)", "hsl(199, 89%, 48%)"];
 
@@ -148,9 +149,12 @@ const AdminDashboard = () => {
           <h1 className="text-2xl font-heading font-bold text-foreground">Admin Dashboard</h1>
           <p className="text-sm text-muted-foreground">Platform overview & analytics</p>
         </div>
-        <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30 text-xs">
-          <Globe className="w-3 h-3 mr-1" /> Live
-        </Badge>
+        <div className="flex items-center gap-3">
+          <AdminNotificationBell />
+          <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30 text-xs">
+            <Globe className="w-3 h-3 mr-1" /> Live
+          </Badge>
+        </div>
       </div>
 
       {/* Today's Highlights */}

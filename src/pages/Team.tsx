@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Users, Copy, User } from "lucide-react";
@@ -15,25 +14,47 @@ interface Referral {
   created_at: string;
 }
 
+interface CommissionRates {
+  level_1?: number;
+  level_2?: number;
+  level_3?: number;
+}
+
 const Team = () => {
   const { user } = useAuth();
   const [referralCode, setReferralCode] = useState("");
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [totalCommission, setTotalCommission] = useState(0);
+  const [commissionByUser, setCommissionByUser] = useState<Map<string, number>>(new Map());
+  const [commissionRates, setCommissionRates] = useState<CommissionRates>({});
   const [loading, setLoading] = useState(true);
   const [activeTier, setActiveTier] = useState(1);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [profileRes, refRes, comRes] = await Promise.all([
+      const [profileRes, refRes, comRes, ratesRes] = await Promise.all([
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
         supabase.from("referrals").select("*").eq("referrer_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("commissions").select("amount").eq("user_id", user.id),
+        supabase.from("commissions").select("amount, from_user_id").eq("user_id", user.id),
+        supabase.from("platform_settings").select("value").eq("key", "commission_rates").maybeSingle(),
       ]);
       setReferralCode(profileRes.data?.referral_code || "");
       setReferrals((refRes.data || []) as Referral[]);
-      setTotalCommission((comRes.data || []).reduce((s: number, c: any) => s + Number(c.amount), 0));
+
+      const commissions = comRes.data || [];
+      setTotalCommission(commissions.reduce((s: number, c: any) => s + Number(c.amount), 0));
+
+      // Build per-user commission map
+      const userComMap = new Map<string, number>();
+      commissions.forEach((c: any) => {
+        if (c.from_user_id) {
+          userComMap.set(c.from_user_id, (userComMap.get(c.from_user_id) || 0) + Number(c.amount));
+        }
+      });
+      setCommissionByUser(userComMap);
+
+      setCommissionRates((ratesRes.data?.value as CommissionRates) || {});
       setLoading(false);
     };
     fetchData();
@@ -43,6 +64,17 @@ const Team = () => {
   const copyLink = () => { navigator.clipboard.writeText(referralLink); toast.success("Invitation link copied!"); };
 
   const tierRefs = (tier: number) => referrals.filter((r) => r.tier === tier);
+
+  const getTierRate = (tier: number) => {
+    if (tier === 1) return commissionRates.level_1 || 0;
+    if (tier === 2) return commissionRates.level_2 || 0;
+    return commissionRates.level_3 || 0;
+  };
+
+  const getEmptyMessage = (tier: number) => {
+    const rate = getTierRate(tier);
+    return rate > 0 ? `Invite friends to earn ${rate}% commission!` : "Invite friends to earn commission!";
+  };
 
   if (loading) return <div className="px-4 py-4 space-y-4"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
 
@@ -72,9 +104,9 @@ const Team = () => {
         {/* Tier Tabs */}
         <div className="flex gap-2">
           {[
-            { tier: 1, label: "Level 1 (Direct)" },
-            { tier: 2, label: "Level 2" },
-            { tier: 3, label: "Level 3" },
+            { tier: 1, label: `Level 1 (${getTierRate(1)}%)` },
+            { tier: 2, label: `Level 2 (${getTierRate(2)}%)` },
+            { tier: 3, label: `Level 3 (${getTierRate(3)}%)` },
           ].map(({ tier, label }) => (
             <button
               key={tier}
@@ -97,12 +129,13 @@ const Team = () => {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
               <Users className="w-8 h-8 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground">Invite friends to earn 12% commission!</p>
+            <p className="text-sm text-muted-foreground">{getEmptyMessage(activeTier)}</p>
           </div>
         ) : (
           <div className="space-y-2">
             {tierRefs(activeTier).map((ref) => {
               const maskedId = ref.referred_id.slice(0, 2) + "***" + ref.referred_id.slice(-3);
+              const earned = commissionByUser.get(ref.referred_id) || 0;
               return (
                 <div key={ref.id} className="shadow-neu rounded-xl bg-card p-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -119,7 +152,9 @@ const Team = () => {
                       <span className="w-2 h-2 rounded-full bg-success" />
                       <span className="text-[10px] text-success">Active</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">Rs 0.00</p>
+                    <p className={cn("text-xs mt-0.5", earned > 0 ? "text-success font-semibold" : "text-muted-foreground")}>
+                      Rs {earned.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               );
