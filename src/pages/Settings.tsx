@@ -113,7 +113,7 @@ const Settings = () => {
   const serverTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
   const gridItems = [
-    { label: "Bank Info", icon: CreditCard, key: "bank", action: () => setActiveSection(activeSection === "bank" ? null : "bank") },
+    { label: "Bank Info", icon: CreditCard, key: "bank", action: () => navigate("/bank-info") },
     { label: "Deposit History", icon: ArrowDownToLine, key: "deposit-history", action: () => navigate("/transactions") },
     { label: "Withdraw History", icon: ArrowUpFromLine, key: "withdraw-history", action: () => navigate("/transactions") },
     { label: "My Packages", icon: Gift, key: "packages", action: () => navigate("/packages") },

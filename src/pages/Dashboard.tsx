@@ -449,16 +449,6 @@ const Dashboard = () => {
         <div className="h-4" />
       </div>
 
-      {/* ═══════ FLOATING WHATSAPP ═══════ */}
-      <a
-        href="https://wa.me/94700000000"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-[5.5rem] right-4 z-[60] w-14 h-14 rounded-full bg-[hsl(142,71%,45%)] shadow-[0_4px_14px_rgba(37,211,102,0.5)] flex items-center justify-center hover:scale-110 transition-transform"
-        style={{ position: "fixed" }}
-      >
-        <MessageCircle className="w-7 h-7 text-white animate-pulse" />
-      </a>
     </div>
   );
 };

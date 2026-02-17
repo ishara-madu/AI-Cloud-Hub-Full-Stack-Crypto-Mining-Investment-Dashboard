@@ -22,6 +22,7 @@ import DailySignIn from "./pages/DailySignIn";
 import About from "./pages/About";
 import Redeem from "./pages/Redeem";
 import Notifications from "./pages/Notifications";
+import BankInfo from "./pages/BankInfo";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -43,7 +44,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      <Sonner closeButton />
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/about" element={<ProtectedPage><About /></ProtectedPage>} />
             <Route path="/redeem" element={<ProtectedPage><Redeem /></ProtectedPage>} />
             <Route path="/notifications" element={<ProtectedPage><Notifications /></ProtectedPage>} />
+            <Route path="/bank-info" element={<ProtectedPage><BankInfo /></ProtectedPage>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
             <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
