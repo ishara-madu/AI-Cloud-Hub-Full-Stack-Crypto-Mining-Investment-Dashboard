@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Brain, Database as DbIcon, Cpu, Server, Zap, Star, Loader2, ShoppingCart, CheckCircle2 } from "lucide-react";
+import { Brain, Database as DbIcon, Cpu, Server, Zap, Star, Loader2, ShoppingCart, CheckCircle2, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AiPackage {
@@ -183,22 +183,76 @@ const Packages = () => {
         {/* My Packages */}
         {userPackages.length > 0 && (
           <div className="mt-6">
-            <h2 className="text-sm font-heading font-bold text-foreground mb-3">My Packages</h2>
-            <div className="space-y-2">
-              {userPackages.map((up) => (
-                <div key={up.id} className="shadow-neu rounded-xl bg-card p-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{(up.ai_packages as any)?.name || "Package"}</p>
-                    <p className="text-[10px] text-muted-foreground">Purchased {new Date(up.purchased_at).toLocaleDateString()}</p>
+            <h2 className="text-base font-heading font-bold text-foreground mb-3">📦 My Active Packages</h2>
+            <div className="space-y-3">
+              {userPackages.map((up) => {
+                const dailyIncome = Math.round(up.price_paid * 0.05);
+                const totalDays = up.expires_at
+                  ? Math.ceil((new Date(up.expires_at).getTime() - new Date(up.purchased_at).getTime()) / 86400000)
+                  : 30;
+                const daysElapsed = Math.min(
+                  Math.ceil((Date.now() - new Date(up.purchased_at).getTime()) / 86400000),
+                  totalDays
+                );
+                const daysRemaining = Math.max(totalDays - daysElapsed, 0);
+                const progressPct = Math.round((daysElapsed / totalDays) * 100);
+                const totalRevenue = dailyIncome * totalDays;
+                const earned = dailyIncome * daysElapsed;
+
+                return (
+                  <div key={up.id} className="shadow-neu rounded-2xl bg-card overflow-hidden">
+                    <div className={cn(
+                      "px-4 py-3 flex items-center justify-between",
+                      up.is_active ? "gradient-primary" : "bg-muted"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <Package className={cn("w-5 h-5", up.is_active ? "text-primary-foreground" : "text-muted-foreground")} />
+                        <p className={cn("text-sm font-heading font-bold", up.is_active ? "text-primary-foreground" : "text-muted-foreground")}>
+                          {(up.ai_packages as any)?.name || "Package"}
+                        </p>
+                      </div>
+                      <Badge className={cn(
+                        "text-[10px] px-2",
+                        up.is_active ? "bg-white/20 text-primary-foreground border-white/30" : "bg-muted text-muted-foreground"
+                      )}>
+                        {up.is_active ? "Active" : "Expired"}
+                      </Badge>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Invested</p>
+                          <p className="text-sm font-heading font-bold text-foreground">Rs.{up.price_paid.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Daily Income</p>
+                          <p className="text-sm font-heading font-bold text-success">Rs.{dailyIncome}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Total Revenue</p>
+                          <p className="text-sm font-heading font-bold text-foreground">Rs.{totalRevenue.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                          <span>Earned: Rs.{earned.toLocaleString()}</span>
+                          <span>{daysRemaining}d remaining</span>
+                        </div>
+                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full gradient-primary rounded-full transition-all"
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <span>Purchased: {new Date(up.purchased_at).toLocaleDateString()}</span>
+                        {up.expires_at && <span>Expires: {new Date(up.expires_at).toLocaleDateString()}</span>}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-medium">Rs.{up.price_paid.toFixed(0)}</p>
-                    <Badge className={cn("text-[9px]", up.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>
-                      {up.is_active ? "Active" : "Expired"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

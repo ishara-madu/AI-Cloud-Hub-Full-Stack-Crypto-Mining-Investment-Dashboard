@@ -40,6 +40,16 @@ interface AiPackage {
   is_active: boolean | null;
 }
 
+interface UserPackage {
+  id: string;
+  package_id: string;
+  purchased_at: string;
+  expires_at: string | null;
+  is_active: boolean;
+  price_paid: number;
+  ai_packages: { name: string; description: string | null } | null;
+}
+
 // --- Random data generators ---
 const randomPhone = () => {
   const prefix = ["74", "75", "76", "77", "78", "70", "71", "72"];
@@ -78,6 +88,7 @@ const Dashboard = () => {
   const [packages, setPackages] = useState<AiPackage[]>([]);
   const [referralCode, setReferralCode] = useState("");
   const [commissionTotal, setCommissionTotal] = useState(0);
+  const [userPackages, setUserPackages] = useState<UserPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [marqueeMsg, setMarqueeMsg] = useState(() => generateMarqueeMsg());
   const [livePayouts, setLivePayouts] = useState<{ user: string; amount: number; key: number }[]>([]);
@@ -85,17 +96,19 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [walletRes, pkgRes, profileRes, comRes] = await Promise.all([
+      const [walletRes, pkgRes, profileRes, comRes, upRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("ai_packages").select("*").order("price_monthly", { ascending: true }),
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
         supabase.from("commissions").select("amount").eq("user_id", user.id),
+        supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).eq("is_active", true).order("purchased_at", { ascending: false }),
       ]);
       setWallet(walletRes.data as WalletData | null);
       const pkgs = (pkgRes.data || []).map((p: any) => ({ ...p, features: Array.isArray(p.features) ? p.features : [] }));
       setPackages(pkgs as AiPackage[]);
       setReferralCode(profileRes.data?.referral_code || "");
       setCommissionTotal((comRes.data || []).reduce((s: number, c: any) => s + Number(c.amount), 0));
+      setUserPackages((upRes.data || []) as UserPackage[]);
       setLoading(false);
     };
     fetchData();
@@ -263,6 +276,51 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
+
+        {/* ═══════ MY ACTIVE PACKAGES ═══════ */}
+        {userPackages.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-heading font-bold text-foreground">📦 My Packages</h2>
+              <Link to="/packages" className="text-xs text-primary font-medium flex items-center gap-0.5">
+                View All <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
+              {userPackages.slice(0, 5).map((up) => {
+                const dailyIncome = Math.round(up.price_paid * 0.05);
+                const totalDays = up.expires_at
+                  ? Math.ceil((new Date(up.expires_at).getTime() - new Date(up.purchased_at).getTime()) / 86400000)
+                  : 30;
+                const daysElapsed = Math.min(
+                  Math.ceil((Date.now() - new Date(up.purchased_at).getTime()) / 86400000),
+                  totalDays
+                );
+                const daysRemaining = Math.max(totalDays - daysElapsed, 0);
+                const progressPct = Math.round((daysElapsed / totalDays) * 100);
+
+                return (
+                  <div key={up.id} className="flex-shrink-0 w-[180px] shadow-neu rounded-2xl bg-card p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-heading font-bold text-foreground line-clamp-1">
+                        {(up.ai_packages as any)?.name || "Package"}
+                      </p>
+                      <span className="w-2 h-2 rounded-full bg-success animate-pulse flex-shrink-0" />
+                    </div>
+                    <p className="text-lg font-heading font-bold text-primary">Rs.{up.price_paid.toLocaleString()}</p>
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>Daily: <span className="text-success font-bold">Rs.{dailyIncome}</span></span>
+                      <span>{daysRemaining}d left</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full gradient-primary rounded-full" style={{ width: `${progressPct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ═══════ QUICK ACTION GRID ═══════ */}
         <div className="grid grid-cols-3 gap-3">
