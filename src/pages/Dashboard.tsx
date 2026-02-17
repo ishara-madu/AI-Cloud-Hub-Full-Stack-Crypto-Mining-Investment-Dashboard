@@ -377,37 +377,6 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        {/* ═══════ EXTRA LINKS ═══════ */}
-        <div className="space-y-1">
-          {[
-            { label: "Recent Records", icon: FileText, path: "/transactions" },
-            { label: "FAQ", icon: HelpCircle, path: "/settings" },
-            { label: "Weekly Report", icon: BarChart3, path: "/transactions" },
-            { label: "Contact Support", icon: Headphones, path: "/settings" },
-            { label: "Download APP", icon: Download, path: "#" },
-          ].map((item) => (
-            <Link
-              key={item.label}
-              to={item.path}
-              className="flex items-center justify-between py-3 px-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-shadow"
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className="w-5 h-5 text-muted-foreground" />
-                <span className="text-sm text-foreground">{item.label}</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-          ))}
-
-          <button
-            onClick={signOut}
-            className="flex items-center gap-3 py-3 px-4 bg-card rounded-xl shadow-card w-full text-left hover:shadow-card-hover transition-shadow mt-2"
-          >
-            <LogOut className="w-5 h-5 text-destructive" />
-            <span className="text-sm text-destructive font-medium">Logout</span>
-          </button>
-        </div>
-
         <div className="h-4" />
       </div>
 
