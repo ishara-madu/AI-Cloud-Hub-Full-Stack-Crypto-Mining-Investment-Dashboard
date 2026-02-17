@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"; // VIP badge
 import {
   Home, Package, ShoppingCart, Users, User, Settings as SettingsIcon,
 } from "lucide-react";
