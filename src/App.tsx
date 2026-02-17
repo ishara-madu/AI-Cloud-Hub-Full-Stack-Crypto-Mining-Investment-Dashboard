@@ -32,6 +32,9 @@ import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminPackages from "./pages/admin/AdminPackages";
 import AdminRedeemCodes from "./pages/admin/AdminRedeemCodes";
 import AdminSliders from "./pages/admin/AdminSliders";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminUserPackages from "./pages/admin/AdminUserPackages";
+import AdminAlerts from "./pages/admin/AdminAlerts";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +80,9 @@ const App = () => (
             <Route path="/admin/packages" element={<AdminPage><AdminPackages /></AdminPage>} />
             <Route path="/admin/redeem-codes" element={<AdminPage><AdminRedeemCodes /></AdminPage>} />
             <Route path="/admin/sliders" element={<AdminPage><AdminSliders /></AdminPage>} />
+            <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
+            <Route path="/admin/user-packages" element={<AdminPage><AdminUserPackages /></AdminPage>} />
+            <Route path="/admin/alerts" element={<AdminPage><AdminAlerts /></AdminPage>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -41,13 +41,20 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       const [walletRes, unreadRes, recentRes] = await Promise.all([
         supabase.from("wallets").select("total_deposited").eq("user_id", user.id).maybeSingle(),
         supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_read", false),
-        supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(3),
+        supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
       ]);
       const deposited = walletRes.data?.total_deposited ? Number(walletRes.data.total_deposited) : 0;
       const thresholds = [0, 1000, 5000, 15000, 50000, 100000];
       setVipLevel(thresholds.filter((t) => deposited >= t).length - 1);
       setUnreadCount(unreadRes.count || 0);
       setRecentNotifs(recentRes.data || []);
+
+      // Auto-cleanup: delete notifications older than 1 month
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      await supabase.from("notifications").delete()
+        .eq("user_id", user.id)
+        .lt("created_at", oneMonthAgo.toISOString());
     };
     fetchData();
   }, [user, location.pathname]);
@@ -123,13 +130,23 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                       setUnreadCount(prev => Math.max(0, prev - 1));
                     }
                   }}
-                  className="w-full text-left shadow-neu-inset rounded-xl bg-muted/20 p-3 space-y-1 hover:bg-muted/40 transition-colors"
+                  className={cn(
+                    "w-full text-left rounded-xl p-3 space-y-1 transition-colors",
+                    !n.is_read
+                      ? "bg-primary/5 ring-1 ring-primary/20 border-l-4 border-l-primary shadow-neu"
+                      : "shadow-neu-inset bg-muted/20 hover:bg-muted/40"
+                  )}
                 >
                   <div className="flex items-start gap-2.5">
-                    <span className="text-sm mt-0.5">{typeEmoji[n.type] || "📢"}</span>
+                    <div className="relative">
+                      <span className="text-sm mt-0.5">{typeEmoji[n.type] || "📢"}</span>
+                      {!n.is_read && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-card" />
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-heading font-bold text-foreground truncate">{n.title}</p>
+                        <p className={cn("text-xs font-heading truncate", !n.is_read ? "font-bold text-foreground" : "font-medium text-muted-foreground")}>{n.title}</p>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
                           {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                         </span>
@@ -172,7 +189,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </button>
             </div>
             <div className="border-t border-border pt-3">
-              <p className="text-sm text-foreground leading-relaxed">{selectedNotif.description}</p>
+              <p className="text-sm text-foreground leading-relaxed">{selectedNotif.description || "No additional details."}</p>
             </div>
             <p className="text-[10px] text-muted-foreground">{new Date(selectedNotif.created_at).toLocaleString()}</p>
           </div>

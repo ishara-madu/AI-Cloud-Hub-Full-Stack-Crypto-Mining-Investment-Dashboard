@@ -15,6 +15,11 @@ const banks = [
   "HNB",
   "BOC",
   "Peoples Bank",
+  "NSB",
+  "Seylan Bank",
+  "DFCC Bank",
+  "NTB",
+  "Pan Asia Bank",
 ];
 
 const BankInfo = () => {
@@ -26,11 +31,15 @@ const BankInfo = () => {
   const [accountNumber, setAccountNumber] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [existingId, setExistingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setLoadingData(false); return; }
     supabase.from("bank_accounts").select("*").eq("user_id", user.id).eq("is_default", true).maybeSingle().then(({ data }) => {
       if (data) {
+        setExistingId(data.id);
+        // Parse holder name from iban field (we store it there)
+        setHolderName(data.iban || "");
         const bankMatch = data.bank_name.match(/^(.+?)\s*\(Branch:\s*(\d+)\)$/);
         if (bankMatch) {
           setBankName(bankMatch[1]);
@@ -52,28 +61,29 @@ const BankInfo = () => {
     if (!user) return;
 
     setSaving(true);
-    const { error } = await supabase.from("bank_accounts").upsert(
-      {
-        user_id: user.id,
-        bank_name: `${bankName} (Branch: ${branchCode})`,
-        account_number: accountNumber.trim(),
-        is_default: true,
-      },
-      { onConflict: "user_id" }
-    );
-    setSaving(false);
+    
+    const bankData = {
+      user_id: user.id,
+      bank_name: `${bankName} (Branch: ${branchCode})`,
+      account_number: accountNumber.trim(),
+      iban: holderName.trim(), // Store holder name in iban field
+      is_default: true,
+    };
 
-    if (error) {
-      // If upsert fails due to no unique constraint on user_id, try insert
-      const { error: insertError } = await supabase.from("bank_accounts").insert({
-        user_id: user.id,
-        bank_name: `${bankName} (Branch: ${branchCode})`,
-        account_number: accountNumber.trim(),
-        is_default: true,
-      });
-      if (insertError) { toast.error("Failed to save bank details"); return; }
+    let error;
+    if (existingId) {
+      // Update existing record
+      const res = await supabase.from("bank_accounts").update(bankData).eq("id", existingId);
+      error = res.error;
+    } else {
+      // Insert new record
+      const res = await supabase.from("bank_accounts").insert(bankData).select("id").single();
+      error = res.error;
+      if (!error && res.data) setExistingId(res.data.id);
     }
 
+    setSaving(false);
+    if (error) { toast.error("Failed to save bank details"); return; }
     toast.success("Bank details saved successfully!");
     navigate("/settings");
   };
@@ -157,7 +167,7 @@ const BankInfo = () => {
             className="w-full rounded-xl h-12 gradient-primary text-primary-foreground font-semibold text-sm shadow-md"
           >
             {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Save Information
+            {existingId ? "Update Information" : "Save Information"}
           </Button>
         </div>
       </div>
