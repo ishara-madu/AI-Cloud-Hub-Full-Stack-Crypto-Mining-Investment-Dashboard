@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --background: 30 25% 98%;
+    --background: 0 0% 97%;
     --foreground: 220 25% 10%;
 
     --card: 0 0% 100%;
@@ -108,10 +108,46 @@
   .gradient-dark {
     background: linear-gradient(135deg, hsl(220 25% 10%) 0%, hsl(220 30% 18%) 100%);
   }
+  .gradient-balance {
+    background: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(174 62% 40%) 100%);
+  }
+  .gradient-commission {
+    background: linear-gradient(135deg, hsl(24 95% 58%) 0%, hsl(24 95% 45%) 100%);
+  }
   .shadow-card {
     box-shadow: 0 1px 3px 0 hsl(220 25% 10% / 0.06), 0 1px 2px -1px hsl(220 25% 10% / 0.06);
   }
   .shadow-card-hover {
     box-shadow: 0 10px 25px -5px hsl(220 25% 10% / 0.08), 0 8px 10px -6px hsl(220 25% 10% / 0.06);
+  }
+  .shadow-neu {
+    box-shadow: 6px 6px 12px hsl(220 25% 10% / 0.08), -4px -4px 10px hsl(0 0% 100% / 0.9);
+  }
+  .shadow-neu-inset {
+    box-shadow: inset 3px 3px 6px hsl(220 25% 10% / 0.06), inset -3px -3px 6px hsl(0 0% 100% / 0.7);
+  }
+  .glow-orange {
+    box-shadow: 0 0 20px hsl(24 95% 53% / 0.35), 0 0 40px hsl(24 95% 53% / 0.15);
+  }
+  .glow-teal {
+    box-shadow: 0 0 20px hsl(174 62% 40% / 0.35), 0 0 40px hsl(174 62% 40% / 0.15);
+  }
+
+  /* Scrolling notification */
+  @keyframes scroll-left {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+  .animate-scroll-left {
+    animation: scroll-left 12s linear infinite;
+  }
+
+  /* Hide scrollbar for horizontal scroll */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

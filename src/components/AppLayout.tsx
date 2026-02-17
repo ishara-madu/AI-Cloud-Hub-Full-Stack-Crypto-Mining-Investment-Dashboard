@@ -1,109 +1,72 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Wallet, Package, Receipt, Users, Settings, LogOut,
-  ChevronLeft, ChevronRight, Zap, Menu, X, ArrowDownToLine, ArrowUpFromLine
+  Home, Package, ShoppingCart, Users, User, Settings as SettingsIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Deposit", icon: ArrowDownToLine, path: "/deposit" },
-  { label: "Withdraw", icon: ArrowUpFromLine, path: "/withdraw" },
-  { label: "AI Packages", icon: Package, path: "/packages" },
-  { label: "Transactions", icon: Receipt, path: "/transactions" },
+const bottomNav = [
+  { label: "Home", icon: Home, path: "/dashboard" },
+  { label: "Packages", icon: Package, path: "/packages" },
+  { label: "Mall", icon: ShoppingCart, path: "/transactions" },
   { label: "Team", icon: Users, path: "/team" },
-  { label: "Settings", icon: Settings, path: "/settings" },
+  { label: "My", icon: User, path: "/settings" },
 ];
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { signOut } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
 
+  const maskedPhone = user?.phone
+    ? user.phone.slice(0, 1) + "******" + user.phone.slice(-3)
+    : "7******402";
+
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 bg-foreground/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
-      )}
-
-      {/* Sidebar */}
-      <aside className={cn(
-        "fixed top-0 left-0 h-full z-50 gradient-dark text-sidebar-foreground flex flex-col transition-all duration-300",
-        collapsed ? "w-[72px]" : "w-64",
-        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
-          <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5 text-primary-foreground" />
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Top header */}
+      <header className="sticky top-0 z-40 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+              <User className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <span className="text-sm font-medium text-foreground">{maskedPhone}</span>
           </div>
-          {!collapsed && <span className="text-lg font-heading font-bold">NexusAI</span>}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">EN / සිංහල</span>
+            <Link to="/settings">
+              <SettingsIcon className="w-5 h-5 text-muted-foreground" />
+            </Link>
+          </div>
         </div>
+      </header>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
-          {navItems.map((item) => {
+      {/* Page content — padded for bottom nav */}
+      <main className="flex-1 pb-20 overflow-y-auto">
+        {children}
+      </main>
+
+      {/* Bottom navigation bar */}
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-card border-t border-border safe-area-bottom">
+        <div className="flex items-center justify-around h-16">
+          {bottomNav.map((item) => {
             const active = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  active
-                    ? "gradient-primary text-primary-foreground shadow-md"
-                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  "flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[56px]",
+                  active ? "text-primary" : "text-muted-foreground"
                 )}
               >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                <item.icon className={cn("w-5 h-5", active && "drop-shadow-sm")} />
+                <span className="text-[10px] font-medium">{item.label}</span>
               </Link>
             );
           })}
-        </nav>
-
-        {/* Bottom */}
-        <div className="p-3 border-t border-sidebar-border space-y-1">
-          <button
-            onClick={signOut}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:text-destructive hover:bg-sidebar-accent transition-all w-full"
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!collapsed && <span>Logout</span>}
-          </button>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-all w-full"
-          >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Collapse</span></>}
-          </button>
         </div>
-      </aside>
-
-      {/* Main content */}
-      <main className={cn(
-        "flex-1 transition-all duration-300",
-        collapsed ? "lg:ml-[72px]" : "lg:ml-64"
-      )}>
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 h-16 bg-background/80 backdrop-blur-md border-b border-border flex items-center px-4 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
-          <div className="flex-1" />
-        </header>
-
-        {/* Page content */}
-        <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-          {children}
-        </div>
-      </main>
+      </nav>
     </div>
   );
 };

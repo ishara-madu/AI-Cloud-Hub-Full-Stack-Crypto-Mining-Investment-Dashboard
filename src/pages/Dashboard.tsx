@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, Gift, Package, ArrowRight, TrendingUp, Receipt } from "lucide-react";
+import {
+  ArrowDownToLine, ArrowUpFromLine, Gift, Package, Users, Copy,
+  ChevronRight, FileText, HelpCircle, BarChart3, Headphones, Download, LogOut,
+  Brain, Database as DbIcon, Cpu, Server, Zap, Star
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface WalletData {
   balance: number;
@@ -14,160 +20,291 @@ interface WalletData {
   total_commission: number;
 }
 
-interface Transaction {
+interface AiPackage {
   id: string;
-  type: string;
-  amount: number;
-  status: string;
+  name: string;
   description: string | null;
-  created_at: string;
+  features: string[];
+  price_onetime: number | null;
+  price_monthly: number | null;
+  cashback_percent: number | null;
+  bonus_tag: string | null;
+  is_active: boolean | null;
 }
 
+interface ReferralStats {
+  tier1: number;
+  tier2: number;
+  tier3: number;
+  total: number;
+}
+
+const fakeNotifications = [
+  "75******28 rented Pro GPU Pack and got 100 bonus credits",
+  "93******17 purchased Enterprise AI Suite — Rs 19,000",
+  "61******45 earned Rs 345 cashback from GPU Cluster Pack",
+];
+
+const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
+
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [activePackages, setActivePackages] = useState(0);
-  const [displayName, setDisplayName] = useState("");
+  const [packages, setPackages] = useState<AiPackage[]>([]);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralStats, setReferralStats] = useState<ReferralStats>({ tier1: 0, tier2: 0, tier3: 0, total: 0 });
+  const [commissionTotal, setCommissionTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [activeTier, setActiveTier] = useState(1);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [walletRes, txRes, pkgRes, profileRes] = await Promise.all([
+      const [walletRes, pkgRes, profileRes, refRes, comRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
-        supabase.from("user_packages").select("id").eq("user_id", user.id).eq("is_active", true),
-        supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle(),
+        supabase.from("ai_packages").select("*").order("price_monthly", { ascending: true }),
+        supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
+        supabase.from("referrals").select("tier").eq("referrer_id", user.id),
+        supabase.from("commissions").select("amount").eq("user_id", user.id),
       ]);
       setWallet(walletRes.data as WalletData | null);
-      setTransactions((txRes.data as Transaction[]) || []);
-      setActivePackages(pkgRes.data?.length || 0);
-      setDisplayName(profileRes.data?.display_name || user.email?.split("@")[0] || "User");
+      const pkgs = (pkgRes.data || []).map((p: any) => ({ ...p, features: Array.isArray(p.features) ? p.features : [] }));
+      setPackages(pkgs as AiPackage[]);
+      setReferralCode(profileRes.data?.referral_code || "");
+      const refs = (refRes.data || []) as { tier: number }[];
+      setReferralStats({
+        tier1: refs.filter(r => r.tier === 1).length,
+        tier2: refs.filter(r => r.tier === 2).length,
+        tier3: refs.filter(r => r.tier === 3).length,
+        total: refs.length,
+      });
+      setCommissionTotal((comRes.data || []).reduce((s: number, c: any) => s + Number(c.amount), 0));
       setLoading(false);
     };
     fetchData();
   }, [user]);
 
-  const stats = [
-    { label: "Wallet Balance", value: wallet?.balance ?? 0, icon: Wallet, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Total Deposits", value: wallet?.total_deposited ?? 0, icon: ArrowDownToLine, color: "text-success", bg: "bg-success/10" },
-    { label: "Total Withdrawals", value: wallet?.total_withdrawn ?? 0, icon: ArrowUpFromLine, color: "text-destructive", bg: "bg-destructive/10" },
-    { label: "Total Commissions", value: wallet?.total_commission ?? 0, icon: Gift, color: "text-secondary", bg: "bg-secondary/10" },
-  ];
-
-  const statusColor = (s: string) => s === "approved" ? "text-success bg-success/10" : s === "pending" ? "text-warning bg-warning/10" : "text-destructive bg-destructive/10";
+  const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
+  const copyLink = () => { navigator.clipboard.writeText(referralLink); toast.success("Referral link copied!"); };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
-        </div>
-        <Skeleton className="h-64 rounded-xl" />
+      <div className="px-4 py-4 space-y-4">
+        <Skeleton className="h-40 rounded-2xl" />
+        <Skeleton className="h-24 rounded-2xl" />
+        <Skeleton className="h-64 rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">Welcome back, {displayName}! 👋</h1>
-        <p className="text-muted-foreground mt-1">Here's your account overview</p>
+    <div className="animate-fade-in">
+      {/* Scrolling notification banner */}
+      <div className="bg-primary/10 overflow-hidden h-8 flex items-center">
+        <div className="animate-scroll-left whitespace-nowrap text-xs text-primary font-medium">
+          🎉 {fakeNotifications[Math.floor(Date.now() / 10000) % fakeNotifications.length]}
+        </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="shadow-card hover:shadow-card-hover transition-shadow border-border/50">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
-                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
-                <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-heading font-bold text-foreground">${stat.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
-              <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Quick actions + Active packages */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="shadow-card border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-heading">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Link to="/deposit">
-              <Button className="w-full justify-between gradient-primary text-primary-foreground" size="lg">
-                <span className="flex items-center gap-2"><ArrowDownToLine className="w-4 h-4" /> Deposit Funds</span>
-                <ArrowRight className="w-4 h-4" />
+      <div className="px-4 py-4 space-y-5">
+        {/* ═══════ ACCOUNT BALANCE ═══════ */}
+        <div className="gradient-balance rounded-2xl p-5 text-primary-foreground shadow-neu">
+          <p className="text-sm font-medium opacity-90">Account balance</p>
+          <p className="text-4xl font-heading font-bold mt-1">
+            Rs {(wallet?.balance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </p>
+          <div className="flex gap-3 mt-4">
+            <Link to="/deposit" className="flex-1">
+              <Button className="w-full rounded-xl h-12 bg-success hover:bg-success/90 text-success-foreground font-semibold text-sm shadow-md">
+                <ArrowDownToLine className="w-4 h-4 mr-1.5" />
+                Deposit (තැන්පත් කරන්න)
               </Button>
             </Link>
-            <Link to="/packages">
-              <Button className="w-full justify-between" variant="outline" size="lg">
-                <span className="flex items-center gap-2"><Package className="w-4 h-4" /> Browse Packages</span>
-                <ArrowRight className="w-4 h-4" />
+            <Link to="/withdraw" className="flex-1">
+              <Button className="w-full rounded-xl h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold text-sm shadow-md">
+                <ArrowUpFromLine className="w-4 h-4 mr-1.5" />
+                Withdraw (මුදල් ගන්න)
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="lg:col-span-2 shadow-card border-border/50">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-heading">Active Packages</CardTitle>
-            <span className="text-2xl font-heading font-bold text-primary">{activePackages}</span>
-          </CardHeader>
-          <CardContent>
-            {activePackages === 0 ? (
-              <div className="text-center py-6">
-                <Package className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground">No active packages yet</p>
-                <Link to="/packages"><Button variant="link" className="text-primary mt-1">Browse AI Packages</Button></Link>
+        {/* ═══════ MY INCOME ═══════ */}
+        <div>
+          <h2 className="text-base font-heading font-bold text-foreground mb-3">My income</h2>
+          <div className="shadow-neu rounded-2xl bg-card p-4 mb-3">
+            <p className="text-3xl font-heading font-bold text-foreground">
+              Rs {commissionTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "AI DB Rental Commission", value: 0 },
+              { label: "Package Sales Commission", value: 0 },
+              { label: "Bonus Credits", value: 0 },
+            ].map((item) => (
+              <div key={item.label} className="shadow-neu rounded-xl bg-card p-3 text-center">
+                <p className="text-xs text-muted-foreground leading-tight">{item.label}</p>
+                <p className="text-sm font-heading font-bold text-foreground mt-1">Rs {item.value}</p>
               </div>
-            ) : (
-              <p className="text-muted-foreground">You have {activePackages} active package{activePackages > 1 ? "s" : ""}.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            ))}
+          </div>
+        </div>
 
-      {/* Recent transactions */}
-      <Card className="shadow-card border-border/50">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-heading">Recent Activity</CardTitle>
-          <Link to="/transactions"><Button variant="ghost" size="sm" className="text-primary">View All</Button></Link>
-        </CardHeader>
-        <CardContent>
-          {transactions.length === 0 ? (
-            <div className="text-center py-8">
-              <Receipt className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">No recent transactions</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-foreground capitalize">{tx.type}</p>
-                    <p className="text-xs text-muted-foreground">{tx.description || new Date(tx.created_at).toLocaleDateString()}</p>
+        {/* ═══════ AI PACKAGES MALL ═══════ */}
+        <div>
+          <h2 className="text-base font-heading font-bold text-foreground mb-3">AI Packages Mall</h2>
+          <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
+            {packages.map((pkg, idx) => {
+              const isComingSoon = !pkg.is_active;
+              const price = pkg.price_onetime || pkg.price_monthly || 0;
+              const cashbackAmt = pkg.cashback_percent ? Math.round(price * pkg.cashback_percent / 100) : 0;
+              const IconComp = packageIcons[idx % packageIcons.length];
+              const isHot = pkg.bonus_tag === "HOT";
+              const isNew = pkg.bonus_tag === "NEW";
+
+              return (
+                <div
+                  key={pkg.id}
+                  className={cn(
+                    "flex-shrink-0 w-[200px] rounded-2xl p-4 flex flex-col relative overflow-hidden transition-all",
+                    isComingSoon
+                      ? "bg-muted/70 opacity-60"
+                      : "bg-card shadow-neu hover:shadow-card-hover",
+                    isHot && "ring-2 ring-primary glow-orange w-[220px]"
+                  )}
+                >
+                  {/* Badge */}
+                  {pkg.bonus_tag && !isComingSoon && (
+                    <Badge className={cn(
+                      "absolute top-2 right-2 text-[10px] px-2 py-0.5",
+                      isHot && "bg-destructive text-destructive-foreground",
+                      isNew && "bg-secondary text-secondary-foreground",
+                      !isHot && !isNew && "gradient-secondary text-secondary-foreground"
+                    )}>
+                      {pkg.bonus_tag}
+                    </Badge>
+                  )}
+
+                  {/* Icon */}
+                  <div className={cn(
+                    "w-14 h-14 rounded-xl flex items-center justify-center mb-3",
+                    isComingSoon ? "bg-muted" : idx % 2 === 0 ? "gradient-primary" : "gradient-secondary",
+                  )}>
+                    <IconComp className={cn("w-7 h-7", isComingSoon ? "text-muted-foreground" : "text-primary-foreground")} />
                   </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-semibold ${tx.type === "deposit" || tx.type === "commission" ? "text-success" : "text-foreground"}`}>
-                      {tx.type === "withdrawal" || tx.type === "purchase" ? "-" : "+"}${Math.abs(tx.amount).toFixed(2)}
-                    </p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor(tx.status)}`}>{tx.status}</span>
+
+                  {/* Info */}
+                  <p className="text-sm font-heading font-bold text-foreground leading-tight">{pkg.name}</p>
+                  <p className="text-lg font-heading font-bold text-primary mt-1">
+                    Rs.{price.toLocaleString()}{pkg.price_monthly ? "/month" : ""}
+                  </p>
+                  {pkg.description && (
+                    <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{pkg.description}</p>
+                  )}
+
+                  {/* Cashback badge */}
+                  {cashbackAmt > 0 && !isComingSoon && (
+                    <Badge className="bg-success/15 text-success border-success/30 text-[10px] mt-2 w-fit">
+                      Cashback Rs.{cashbackAmt}
+                    </Badge>
+                  )}
+
+                  {/* Button */}
+                  <div className="mt-auto pt-3">
+                    {isComingSoon ? (
+                      <span className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg block text-center">Coming soon</span>
+                    ) : (
+                      <Link to="/packages">
+                        <Button size="sm" className="w-full rounded-xl gradient-primary text-primary-foreground text-xs h-9 font-semibold">
+                          Buy Now
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ═══════ COMMISSION / TEAM ═══════ */}
+        <div className="gradient-commission rounded-2xl p-5 text-primary-foreground">
+          <h2 className="text-base font-heading font-bold mb-1">Commission (කොමිස්)</h2>
+          <div className="text-center py-4">
+            <p className="text-5xl font-heading font-bold">{referralStats.total}</p>
+            <p className="text-sm opacity-80 mt-1">Total Team Members</p>
+            <p className="text-xs opacity-70 mt-1">New today: 0 · Total consumption: Rs.0</p>
+          </div>
+
+          {/* Invite button */}
+          <Button
+            onClick={copyLink}
+            className="w-full rounded-xl h-12 bg-card/20 hover:bg-card/30 text-primary-foreground font-semibold text-sm backdrop-blur-sm border border-primary-foreground/20"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Invite friends (මිතුරන්ට ආරාධනා කරන්න)
+          </Button>
+
+          {/* Tier tabs */}
+          <div className="flex gap-2 mt-4">
+            {[1, 2, 3].map((tier) => (
+              <button
+                key={tier}
+                onClick={() => setActiveTier(tier)}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-xs font-semibold transition-colors",
+                  activeTier === tier
+                    ? "bg-card/25 text-primary-foreground"
+                    : "text-primary-foreground/60 hover:text-primary-foreground/80"
+                )}
+              >
+                Tier-{tier} ({tier === 1 ? referralStats.tier1 : tier === 2 ? referralStats.tier2 : referralStats.tier3})
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 text-xs opacity-80 space-y-1">
+            <p>People joined: {activeTier === 1 ? referralStats.tier1 : activeTier === 2 ? referralStats.tier2 : referralStats.tier3}</p>
+            <p>Recharged: 0</p>
+            <p>New members today: 0</p>
+          </div>
+        </div>
+
+        {/* ═══════ EXTRA LINKS ═══════ */}
+        <div className="space-y-1">
+          {[
+            { label: "Recent open records", icon: FileText, path: "/transactions" },
+            { label: "FAQ (ගැටළු)", icon: HelpCircle, path: "/settings" },
+            { label: "Weekly report", icon: BarChart3, path: "/transactions" },
+            { label: "Contact support", icon: Headphones, path: "/settings" },
+            { label: "Download APP", icon: Download, path: "#" },
+          ].map((item) => (
+            <Link
+              key={item.label}
+              to={item.path}
+              className="flex items-center justify-between py-3 px-4 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-shadow"
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-foreground">{item.label}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </Link>
+          ))}
+
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 py-3 px-4 bg-card rounded-xl shadow-card w-full text-left hover:shadow-card-hover transition-shadow mt-2"
+          >
+            <LogOut className="w-5 h-5 text-destructive" />
+            <span className="text-sm text-destructive font-medium">Logout</span>
+          </button>
+        </div>
+
+        {/* Spacer for bottom nav */}
+        <div className="h-4" />
+      </div>
     </div>
   );
 };
