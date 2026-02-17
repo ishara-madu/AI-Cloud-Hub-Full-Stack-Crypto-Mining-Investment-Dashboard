@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Search, User, Wallet, ShieldAlert, ShieldCheck, Send, Loader2, Copy, CreditCard } from "lucide-react";
+import { ArrowLeft, Search, User, Wallet, ShieldAlert, ShieldCheck, Send, Loader2, Copy, CreditCard, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface UserRow {
@@ -204,12 +204,25 @@ const AdminUsers = () => {
                   </div>
 
                   {/* Admin actions */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button size="sm" variant={u.is_frozen ? "default" : "destructive"} className="flex-1 rounded-xl text-xs" onClick={() => handleToggleFreeze(u.user_id, u.is_frozen)}>
                       {u.is_frozen ? <><ShieldCheck className="w-3 h-3 mr-1" />Unfreeze</> : <><ShieldAlert className="w-3 h-3 mr-1" />Freeze</>}
                     </Button>
                     <Button size="sm" variant="outline" className="flex-1 rounded-xl text-xs border-destructive text-destructive" onClick={() => handleDecreaseCreditScore(u.user_id, u.credit_score)}>
                       Credit -10
+                    </Button>
+                    <Button size="sm" variant={u.role === "admin" ? "outline" : "secondary"} className="flex-1 rounded-xl text-xs"
+                      onClick={async () => {
+                        if (u.role === "admin") {
+                          await supabase.from("user_roles").update({ role: "user" }).eq("user_id", u.user_id);
+                          toast.success("Demoted to user");
+                        } else {
+                          await supabase.from("user_roles").update({ role: "admin" }).eq("user_id", u.user_id);
+                          toast.success("Promoted to admin");
+                        }
+                        fetchUsers();
+                      }}>
+                      <Crown className="w-3 h-3 mr-1" />{u.role === "admin" ? "Remove Admin" : "Make Admin"}
                     </Button>
                   </div>
 
