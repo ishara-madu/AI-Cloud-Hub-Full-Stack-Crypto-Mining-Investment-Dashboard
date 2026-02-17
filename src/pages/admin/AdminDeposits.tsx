@@ -56,6 +56,10 @@ const AdminDeposits = () => {
         description: `Your deposit of Rs ${amount.toLocaleString()} has been approved and credited to your wallet.`,
       });
     } else {
+      await supabase.from("transactions").insert({
+        user_id: userId, type: "deposit", amount, status: "rejected",
+        description: "Deposit rejected by admin", reference_id: id,
+      });
       await supabase.from("notifications").insert({
         user_id: userId, type: "money",
         title: "Deposit Rejected ❌",

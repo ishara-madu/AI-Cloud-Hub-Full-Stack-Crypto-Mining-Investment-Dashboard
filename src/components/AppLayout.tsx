@@ -30,6 +30,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<any | null>(null);
   const [vipLevel, setVipLevel] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifs, setRecentNotifs] = useState<any[]>([]);
@@ -102,7 +103,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <div className="space-y-3">
               {recentNotifs.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No notifications</p>}
               {recentNotifs.map((n) => (
-                <div key={n.id} className="shadow-neu-inset rounded-xl bg-muted/20 p-3 space-y-1">
+                <button
+                  key={n.id}
+                  onClick={() => setSelectedNotif(n)}
+                  className="w-full text-left shadow-neu-inset rounded-xl bg-muted/20 p-3 space-y-1 hover:bg-muted/40 transition-colors"
+                >
                   <div className="flex items-start gap-2.5">
                     <span className="text-sm mt-0.5">{typeEmoji[n.type] || "📢"}</span>
                     <div className="flex-1 min-w-0">
@@ -112,10 +117,10 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                           {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">{n.description}</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-1">{n.description}</p>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
             <button
@@ -124,6 +129,35 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             >
               See All Notifications →
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Detail Modal */}
+      {selectedNotif && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center px-6" onClick={() => setSelectedNotif(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative w-full max-w-sm shadow-neu rounded-2xl bg-card p-5 space-y-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg">
+                  {typeEmoji[selectedNotif.type] || "📢"}
+                </div>
+                <div>
+                  <p className="text-sm font-heading font-bold text-foreground">{selectedNotif.title}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatDistanceToNow(new Date(selectedNotif.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedNotif(null)} className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="border-t border-border pt-3">
+              <p className="text-sm text-foreground leading-relaxed">{selectedNotif.description}</p>
+            </div>
+            <p className="text-[10px] text-muted-foreground">{new Date(selectedNotif.created_at).toLocaleString()}</p>
           </div>
         </div>
       )}

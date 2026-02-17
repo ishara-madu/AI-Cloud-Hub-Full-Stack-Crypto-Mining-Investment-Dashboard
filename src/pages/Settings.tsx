@@ -31,6 +31,7 @@ const Settings = () => {
   const [totalPackagesPaid, setTotalPackagesPaid] = useState(0);
   const [creditScore, setCreditScore] = useState(100);
   const [isFrozen, setIsFrozen] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
 
   // Password
   const [newPassword, setNewPassword] = useState("");
@@ -47,7 +48,7 @@ const Settings = () => {
       const todayISO = today.toISOString();
 
       const [profileRes, walletRes, frozenRes, todayComRes, userPkgRes] = await Promise.all([
-        supabase.from("profiles").select("display_name, phone, credit_score, is_frozen").eq("user_id", userId).maybeSingle(),
+        supabase.from("profiles").select("display_name, phone, credit_score, is_frozen, referral_code").eq("user_id", userId).maybeSingle(),
         supabase.from("wallets").select("balance, total_deposited, total_withdrawn, total_commission").eq("user_id", userId).maybeSingle(),
         // Frozen = sum of pending withdrawal amounts
         supabase.from("withdrawal_requests").select("amount").eq("user_id", userId).eq("status", "pending"),
@@ -62,6 +63,7 @@ const Settings = () => {
         setPhone(profileRes.data.phone || "");
         setCreditScore(profileRes.data.credit_score ?? 100);
         setIsFrozen(profileRes.data.is_frozen || false);
+        setReferralCode(profileRes.data.referral_code || "");
       }
       if (walletRes.data) setWalletData(walletRes.data as any);
 
@@ -141,20 +143,17 @@ const Settings = () => {
         {/* ===== 1. Supercharged User Header Card ===== */}
         <div className="shadow-neu rounded-2xl bg-card p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-lg shrink-0">
+            <button
+              onClick={() => setActiveSection(activeSection === "edit" ? null : "edit")}
+              className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-lg shrink-0"
+            >
               <User className="w-8 h-8 text-primary-foreground" />
-            </div>
+            </button>
             <div className="flex-1 min-w-0">
               <p className="text-base font-heading font-bold text-foreground truncate">{displayName || "User"}</p>
               <p className="text-xs text-muted-foreground">{maskedEmail}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">ID: {userIdShort}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Referral ID: {referralCode || userIdShort}</p>
             </div>
-            <button
-              onClick={() => setActiveSection(activeSection === "edit" ? null : "edit")}
-              className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center shrink-0"
-            >
-              <User className="w-5 h-5 text-muted-foreground" />
-            </button>
           </div>
 
           <div className="flex items-center gap-3">

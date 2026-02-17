@@ -299,7 +299,7 @@ const Dashboard = () => {
         {/* ═══════ MY INCOME ═══════ */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-heading font-bold text-foreground">My Income</h2>
+            <h2 className="text-base font-heading font-bold text-foreground">Today's Overview</h2>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" /> Refreshes in {countdown}
             </span>
