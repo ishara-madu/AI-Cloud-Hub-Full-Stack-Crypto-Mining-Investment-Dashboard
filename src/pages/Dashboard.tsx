@@ -1,17 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 import { Link } from "react-router-dom";
 import {
-  ArrowDownToLine, ArrowUpFromLine, Gift, Package, Users, Copy,
+  ArrowDownToLine, ArrowUpFromLine, Package, Users, Copy,
   ChevronRight, FileText, HelpCircle, BarChart3, Headphones, Download, LogOut,
-  Brain, Database as DbIcon, Cpu, Server, Zap, Star
+  Brain, Database as DbIcon, Cpu, Server, Zap, Star,
+  Megaphone, CalendarCheck, Send, Wallet, Banknote, Info, MessageCircle,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import Autoplay from "embla-carousel-autoplay";
 
 interface WalletData {
   balance: number;
@@ -32,60 +40,93 @@ interface AiPackage {
   is_active: boolean | null;
 }
 
-interface ReferralStats {
-  tier1: number;
-  tier2: number;
-  tier3: number;
-  total: number;
-}
-
 const fakeNotifications = [
-  "75******28 rented Pro GPU Pack and got 100 bonus credits",
-  "93******17 purchased Enterprise AI Suite — Rs 19,000",
-  "61******45 earned Rs 345 cashback from GPU Cluster Pack",
+  "+9475******28 rented Pro GPU Pack and got 100 bonus credits",
+  "+9493******17 purchased Enterprise AI Suite — Rs 19,000",
+  "+9461******45 earned Rs 345 cashback from GPU Cluster Pack",
+  "+9477******92 withdrew Rs 5,000 successfully",
+];
+
+const fakeLivePayouts = [
+  { user: "+9477***123", amount: 2500, time: "just now" },
+  { user: "+9471***456", amount: 5000, time: "2 min ago" },
+  { user: "+9476***789", amount: 1200, time: "5 min ago" },
+  { user: "+9470***321", amount: 8500, time: "8 min ago" },
+  { user: "+9478***654", amount: 3200, time: "12 min ago" },
+  { user: "+9474***987", amount: 15000, time: "15 min ago" },
+  { user: "+9472***111", amount: 750, time: "18 min ago" },
+  { user: "+9479***222", amount: 4300, time: "22 min ago" },
 ];
 
 const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
+
+const quickActions = [
+  { label: "Sign-in", icon: CalendarCheck, path: "/dashboard", dot: true },
+  { label: "Group", icon: Send, path: "#telegram" },
+  { label: "Deposit", icon: Wallet, path: "/deposit" },
+  { label: "Cash Out", icon: Banknote, path: "/withdraw" },
+  { label: "Support", icon: Headphones, path: "/settings" },
+  { label: "Company", icon: Info, path: "/settings" },
+];
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [packages, setPackages] = useState<AiPackage[]>([]);
   const [referralCode, setReferralCode] = useState("");
-  const [referralStats, setReferralStats] = useState<ReferralStats>({ tier1: 0, tier2: 0, tier3: 0, total: 0 });
   const [commissionTotal, setCommissionTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [activeTier, setActiveTier] = useState(1);
+  const [payoutIndex, setPayoutIndex] = useState(0);
+  const payoutRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [walletRes, pkgRes, profileRes, refRes, comRes] = await Promise.all([
+      const [walletRes, pkgRes, profileRes, comRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("ai_packages").select("*").order("price_monthly", { ascending: true }),
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
-        supabase.from("referrals").select("tier").eq("referrer_id", user.id),
         supabase.from("commissions").select("amount").eq("user_id", user.id),
       ]);
       setWallet(walletRes.data as WalletData | null);
       const pkgs = (pkgRes.data || []).map((p: any) => ({ ...p, features: Array.isArray(p.features) ? p.features : [] }));
       setPackages(pkgs as AiPackage[]);
       setReferralCode(profileRes.data?.referral_code || "");
-      const refs = (refRes.data || []) as { tier: number }[];
-      setReferralStats({
-        tier1: refs.filter(r => r.tier === 1).length,
-        tier2: refs.filter(r => r.tier === 2).length,
-        tier3: refs.filter(r => r.tier === 3).length,
-        total: refs.length,
-      });
       setCommissionTotal((comRes.data || []).reduce((s: number, c: any) => s + Number(c.amount), 0));
       setLoading(false);
     };
     fetchData();
   }, [user]);
 
+  // Live payout auto-scroll
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPayoutIndex((prev) => (prev + 1) % fakeLivePayouts.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
   const copyLink = () => { navigator.clipboard.writeText(referralLink); toast.success("Referral link copied!"); };
+
+  // Countdown timer (fake 23h 59m)
+  const [countdown, setCountdown] = useState("23h 59m");
+  useEffect(() => {
+    const now = new Date();
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    const diff = endOfDay.getTime() - now.getTime();
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    setCountdown(`${h}h ${m}m`);
+    const timer = setInterval(() => {
+      const n = new Date();
+      const d = endOfDay.getTime() - n.getTime();
+      if (d <= 0) { setCountdown("0h 0m"); return; }
+      setCountdown(`${Math.floor(d / 3600000)}h ${Math.floor((d % 3600000) / 60000)}m`);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (loading) {
     return (
@@ -99,14 +140,53 @@ const Dashboard = () => {
 
   return (
     <div className="animate-fade-in">
-      {/* Scrolling notification banner */}
-      <div className="bg-primary/10 overflow-hidden h-8 flex items-center">
-        <div className="animate-scroll-left whitespace-nowrap text-xs text-primary font-medium">
-          🎉 {fakeNotifications[Math.floor(Date.now() / 10000) % fakeNotifications.length]}
+      {/* ═══════ MARQUEE ═══════ */}
+      <div className="bg-primary/10 overflow-hidden h-8 flex items-center gap-2 px-3">
+        <Megaphone className="w-4 h-4 text-primary flex-shrink-0" />
+        <div className="overflow-hidden flex-1">
+          <div className="animate-scroll-left whitespace-nowrap text-xs text-primary font-medium">
+            🎉 {fakeNotifications[Math.floor(Date.now() / 10000) % fakeNotifications.length]}
+          </div>
         </div>
       </div>
 
       <div className="px-4 py-4 space-y-5">
+        {/* ═══════ PROMO CAROUSEL ═══════ */}
+        <Carousel
+          opts={{ loop: true }}
+          plugins={[Autoplay({ delay: 4000, stopOnInteraction: false })]}
+          className="w-full"
+        >
+          <CarouselContent>
+            {[
+              { title: "New User Bonus!", sub: "Get Rs.100 Free on Signup", gradient: "from-yellow-500 via-red-500 to-orange-500" },
+              { title: "Llama 3 Models Available", sub: "Rent Now for Best Returns!", gradient: "from-teal-500 via-cyan-500 to-blue-500" },
+              { title: "Invite 5 Friends", sub: "Win Rs.5,000 Reward!", gradient: "from-orange-500 via-pink-500 to-purple-500" },
+            ].map((slide, i) => (
+              <CarouselItem key={i}>
+                <div className={cn(
+                  "rounded-2xl p-5 aspect-[16/7] flex flex-col justify-end bg-gradient-to-br text-white relative overflow-hidden",
+                  slide.gradient
+                )}>
+                  <div className="absolute inset-0 bg-black/10" />
+                  <div className="relative z-10">
+                    <p className="text-lg font-heading font-bold leading-tight">{slide.title}</p>
+                    <p className="text-sm opacity-90 mt-0.5">{slide.sub}</p>
+                  </div>
+                  {/* Decorative circles */}
+                  <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10" />
+                  <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/10" />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <div className="flex justify-center gap-1.5 mt-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-primary/30" />
+            ))}
+          </div>
+        </Carousel>
+
         {/* ═══════ ACCOUNT BALANCE ═══════ */}
         <div className="gradient-balance rounded-2xl p-5 text-primary-foreground shadow-neu">
           <p className="text-sm font-medium opacity-90">Account balance</p>
@@ -117,13 +197,13 @@ const Dashboard = () => {
             <Link to="/deposit" className="flex-1">
               <Button className="w-full rounded-xl h-12 bg-success hover:bg-success/90 text-success-foreground font-semibold text-sm shadow-md">
                 <ArrowDownToLine className="w-4 h-4 mr-1.5" />
-                Deposit (තැන්පත් කරන්න)
+                Deposit
               </Button>
             </Link>
             <Link to="/withdraw" className="flex-1">
               <Button className="w-full rounded-xl h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold text-sm shadow-md">
                 <ArrowUpFromLine className="w-4 h-4 mr-1.5" />
-                Withdraw (මුදල් ගන්න)
+                Withdraw
               </Button>
             </Link>
           </div>
@@ -131,7 +211,12 @@ const Dashboard = () => {
 
         {/* ═══════ MY INCOME ═══════ */}
         <div>
-          <h2 className="text-base font-heading font-bold text-foreground mb-3">My income</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-heading font-bold text-foreground">My Income</h2>
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Refreshes in {countdown}
+            </span>
+          </div>
           <div className="shadow-neu rounded-2xl bg-card p-4 mb-3">
             <p className="text-3xl font-heading font-bold text-foreground">
               Rs {commissionTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}
@@ -139,8 +224,8 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "AI DB Rental Commission", value: 0 },
-              { label: "Package Sales Commission", value: 0 },
+              { label: "AI DB Rental", value: 0 },
+              { label: "Package Sales", value: 0 },
               { label: "Bonus Credits", value: 0 },
             ].map((item) => (
               <div key={item.label} className="shadow-neu rounded-xl bg-card p-3 text-center">
@@ -151,9 +236,33 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* ═══════ QUICK ACTION GRID ═══════ */}
+        <div className="grid grid-cols-3 gap-3">
+          {quickActions.map((action) => (
+            <Link
+              key={action.label}
+              to={action.path}
+              className="flex flex-col items-center gap-1.5 py-3 bg-card rounded-2xl shadow-neu hover:shadow-card-hover transition-shadow"
+            >
+              <div className="relative w-11 h-11 rounded-full gradient-primary flex items-center justify-center">
+                <action.icon className="w-5 h-5 text-primary-foreground" />
+                {action.dot && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-destructive rounded-full border-2 border-card" />
+                )}
+              </div>
+              <span className="text-[11px] font-medium text-foreground">{action.label}</span>
+            </Link>
+          ))}
+        </div>
+
         {/* ═══════ AI PACKAGES MALL ═══════ */}
         <div>
-          <h2 className="text-base font-heading font-bold text-foreground mb-3">AI Packages Mall</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-heading font-bold text-foreground">AI Packages Mall</h2>
+            <Link to="/packages" className="text-xs text-primary font-medium flex items-center gap-0.5">
+              View All <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
           <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
             {packages.map((pkg, idx) => {
               const isComingSoon = !pkg.is_active;
@@ -174,7 +283,6 @@ const Dashboard = () => {
                     isHot && "ring-2 ring-primary glow-orange w-[220px]"
                   )}
                 >
-                  {/* Badge */}
                   {pkg.bonus_tag && !isComingSoon && (
                     <Badge className={cn(
                       "absolute top-2 right-2 text-[10px] px-2 py-0.5",
@@ -186,7 +294,6 @@ const Dashboard = () => {
                     </Badge>
                   )}
 
-                  {/* Icon */}
                   <div className={cn(
                     "w-14 h-14 rounded-xl flex items-center justify-center mb-3",
                     isComingSoon ? "bg-muted" : idx % 2 === 0 ? "gradient-primary" : "gradient-secondary",
@@ -194,7 +301,6 @@ const Dashboard = () => {
                     <IconComp className={cn("w-7 h-7", isComingSoon ? "text-muted-foreground" : "text-primary-foreground")} />
                   </div>
 
-                  {/* Info */}
                   <p className="text-sm font-heading font-bold text-foreground leading-tight">{pkg.name}</p>
                   <p className="text-lg font-heading font-bold text-primary mt-1">
                     Rs.{price.toLocaleString()}{pkg.price_monthly ? "/month" : ""}
@@ -203,14 +309,17 @@ const Dashboard = () => {
                     <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{pkg.description}</p>
                   )}
 
-                  {/* Cashback badge */}
                   {cashbackAmt > 0 && !isComingSoon && (
                     <Badge className="bg-success/15 text-success border-success/30 text-[10px] mt-2 w-fit">
                       Cashback Rs.{cashbackAmt}
                     </Badge>
                   )}
 
-                  {/* Button */}
+                  {/* Limited stock on HOT items */}
+                  {isHot && (
+                    <p className="text-[10px] text-destructive font-semibold mt-2">🔥 Limited Stock: 14 left</p>
+                  )}
+
                   <div className="mt-auto pt-3">
                     {isComingSoon ? (
                       <span className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg block text-center">Coming soon</span>
@@ -228,56 +337,53 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══════ COMMISSION / TEAM ═══════ */}
-        <div className="gradient-commission rounded-2xl p-5 text-primary-foreground">
-          <h2 className="text-base font-heading font-bold mb-1">Commission (කොමිස්)</h2>
-          <div className="text-center py-4">
-            <p className="text-5xl font-heading font-bold">{referralStats.total}</p>
-            <p className="text-sm opacity-80 mt-1">Total Team Members</p>
-            <p className="text-xs opacity-70 mt-1">New today: 0 · Total consumption: Rs.0</p>
+        {/* ═══════ LIVE PAYOUTS ═══════ */}
+        <div>
+          <h2 className="text-base font-heading font-bold text-foreground mb-3">Live Withdrawals</h2>
+          <div className="bg-card rounded-2xl shadow-neu overflow-hidden h-[150px] relative">
+            <div
+              ref={payoutRef}
+              className="transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateY(-${payoutIndex * 38}px)` }}
+            >
+              {[...fakeLivePayouts, ...fakeLivePayouts].map((p, i) => (
+                <div key={i} className="flex items-center justify-between px-4 h-[38px] border-b border-border/50 last:border-0">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                    <span>User {p.user} withdrew</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-success">Rs.{p.amount.toLocaleString()}</span>
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-success/30 text-success">
+                      Success
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
 
-          {/* Invite button */}
+        {/* ═══════ INVITE BANNER ═══════ */}
+        <div className="gradient-commission rounded-2xl p-5 text-primary-foreground">
+          <h2 className="text-base font-heading font-bold mb-1">Invite & Earn</h2>
+          <p className="text-sm opacity-80 mb-3">Invite friends and earn up to 12% commission on every package they buy.</p>
           <Button
             onClick={copyLink}
             className="w-full rounded-xl h-12 bg-card/20 hover:bg-card/30 text-primary-foreground font-semibold text-sm backdrop-blur-sm border border-primary-foreground/20"
           >
             <Users className="w-4 h-4 mr-2" />
-            Invite friends (මිතුරන්ට ආරාධනා කරන්න)
+            Copy Invitation Link
           </Button>
-
-          {/* Tier tabs */}
-          <div className="flex gap-2 mt-4">
-            {[1, 2, 3].map((tier) => (
-              <button
-                key={tier}
-                onClick={() => setActiveTier(tier)}
-                className={cn(
-                  "flex-1 py-2 rounded-lg text-xs font-semibold transition-colors",
-                  activeTier === tier
-                    ? "bg-card/25 text-primary-foreground"
-                    : "text-primary-foreground/60 hover:text-primary-foreground/80"
-                )}
-              >
-                Tier-{tier} ({tier === 1 ? referralStats.tier1 : tier === 2 ? referralStats.tier2 : referralStats.tier3})
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-3 text-xs opacity-80 space-y-1">
-            <p>People joined: {activeTier === 1 ? referralStats.tier1 : activeTier === 2 ? referralStats.tier2 : referralStats.tier3}</p>
-            <p>Recharged: 0</p>
-            <p>New members today: 0</p>
-          </div>
         </div>
 
         {/* ═══════ EXTRA LINKS ═══════ */}
         <div className="space-y-1">
           {[
-            { label: "Recent open records", icon: FileText, path: "/transactions" },
-            { label: "FAQ (ගැටළු)", icon: HelpCircle, path: "/settings" },
-            { label: "Weekly report", icon: BarChart3, path: "/transactions" },
-            { label: "Contact support", icon: Headphones, path: "/settings" },
+            { label: "Recent Records", icon: FileText, path: "/transactions" },
+            { label: "FAQ", icon: HelpCircle, path: "/settings" },
+            { label: "Weekly Report", icon: BarChart3, path: "/transactions" },
+            { label: "Contact Support", icon: Headphones, path: "/settings" },
             { label: "Download APP", icon: Download, path: "#" },
           ].map((item) => (
             <Link
@@ -302,9 +408,18 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Spacer for bottom nav */}
         <div className="h-4" />
       </div>
+
+      {/* ═══════ FLOATING WHATSAPP ═══════ */}
+      <a
+        href="https://wa.me/94700000000"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-success shadow-lg flex items-center justify-center animate-pulse hover:scale-110 transition-transform"
+      >
+        <MessageCircle className="w-7 h-7 text-success-foreground" />
+      </a>
     </div>
   );
 };
