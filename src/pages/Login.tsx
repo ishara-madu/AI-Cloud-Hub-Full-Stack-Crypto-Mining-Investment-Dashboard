@@ -48,8 +48,15 @@ const Login = () => {
 
   // Redirect to dashboard if already signed in (e.g. after Google OAuth)
   useEffect(() => {
+    // Check existing session first
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/dashboard", { replace: true });
+      }
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+      if (event === "SIGNED_IN" && session?.user) {
         logDevice(session.user.id, "login");
         navigate("/dashboard", { replace: true });
       }
@@ -64,8 +71,8 @@ const Login = () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) { toast.error(error.message); } else {
-      if (data.user) await logDevice(data.user.id, "login");
-      navigate("/dashboard");
+      if (data.user) logDevice(data.user.id, "login");
+      navigate("/dashboard", { replace: true });
     }
   };
 

@@ -43,8 +43,15 @@ const Register = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check existing session first
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/dashboard", { replace: true });
+      }
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+      if (event === "SIGNED_IN" && session?.user) {
         logDevice(session.user.id, "signup");
         navigate("/dashboard", { replace: true });
       }
