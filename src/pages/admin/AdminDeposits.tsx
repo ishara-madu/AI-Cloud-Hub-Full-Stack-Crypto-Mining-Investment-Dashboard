@@ -40,12 +40,36 @@ const AdminDeposits = () => {
 
     if (action === "approved") {
       const { data: wallet } = await supabase.from("wallets").select("balance, total_deposited").eq("user_id", userId).maybeSingle();
+      const balBefore = wallet ? Number(wallet.balance) : 0;
+      const depBefore = wallet ? Number(wallet.total_deposited) : 0;
       if (wallet) {
         await supabase.from("wallets").update({
           balance: Number(wallet.balance) + amount,
           total_deposited: Number(wallet.total_deposited) + amount,
         }).eq("user_id", userId);
       }
+
+      // Verify balance after update
+      const { data: walletAfter } = await supabase.from("wallets").select("balance, total_deposited").eq("user_id", userId).maybeSingle();
+      const balAfter = walletAfter ? Number(walletAfter.balance) : 0;
+      const expectedBal = balBefore + amount;
+
+      if (Math.abs(balAfter - expectedBal) > 0.01) {
+        await supabase.from("admin_alerts").insert({
+          alert_type: "integrity_error", severity: "critical",
+          title: "⚠️ Balance Mismatch on Deposit Approval",
+          description: `Deposit Rs ${amount.toLocaleString()} for ${profileMap.get(userId) || "User"}. Expected balance: Rs ${expectedBal.toLocaleString()}, Actual: Rs ${balAfter.toLocaleString()}. Possible concurrent modification.`,
+          related_user_ids: [userId],
+        });
+      } else {
+        await supabase.from("admin_alerts").insert({
+          alert_type: "deposit_approved", severity: "info",
+          title: "Deposit Approved ✅",
+          description: `Deposit Rs ${amount.toLocaleString()} approved for ${profileMap.get(userId) || "User"}. Balance: Rs ${balBefore.toLocaleString()} → Rs ${balAfter.toLocaleString()}. Verified OK.`,
+          related_user_ids: [userId],
+        });
+      }
+
       // Update existing pending transaction to approved
       await supabase.from("transactions").update({ status: "approved", description: "Deposit approved by admin" })
         .eq("user_id", userId).eq("type", "deposit").eq("status", "pending").eq("reference_id", id);

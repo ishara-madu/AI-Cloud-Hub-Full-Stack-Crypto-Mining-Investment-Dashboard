@@ -625,6 +625,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      daily_checkin: { Args: never; Returns: Json }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
