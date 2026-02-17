@@ -120,7 +120,7 @@ const Settings = () => {
     { label: "Team Report", icon: Users, key: "team", action: () => navigate("/team") },
     { label: "Commission Details", icon: PieChart, key: "commission", action: () => navigate("/transactions") },
     { label: "Redeem Code", icon: Tag, key: "redeem", action: () => navigate("/redeem") },
-    { label: "Message Center", icon: Bell, key: "messages", action: () => toast.info("No new messages") },
+    { label: "Message Center", icon: Bell, key: "messages", action: () => navigate("/notifications") },
     { label: "Change Password", icon: Lock, key: "password", action: () => setActiveSection(activeSection === "password" ? null : "password") },
     { label: "Download App", icon: CloudDownload, key: "download", action: () => toast.info("Coming soon!") },
     { label: "Support", icon: Headphones, key: "support", action: () => window.open("https://wa.me/94771234567", "_blank") },

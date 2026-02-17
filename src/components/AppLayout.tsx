@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Home, Package, ShoppingCart, Users, User, Bell, X,
 } from "lucide-react";
+import { notifications, typeEmoji } from "@/data/notifications";
 
 const bottomNav = [
   { label: "Home", icon: Home, path: "/dashboard" },
@@ -16,15 +16,12 @@ const bottomNav = [
   { label: "My", icon: User, path: "/settings" },
 ];
 
-const notifications = [
-  { id: 1, title: "System Maintenance", desc: "Scheduled maintenance on Feb 20, 2am-4am IST.", time: "2h ago" },
-  { id: 2, title: "Bonus Received", desc: "You received Rs.100 signup bonus credits! 🎁", time: "5h ago" },
-  { id: 3, title: "New GPU Stock", desc: "Llama 3 GPU clusters are now available for rental.", time: "1d ago" },
-];
+const popupNotifications = notifications.slice(0, 3);
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [showNotifs, setShowNotifs] = useState(false);
 
   const maskedEmail = user?.email
@@ -72,22 +69,27 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </button>
             </div>
             <div className="space-y-3">
-              {notifications.map((n) => (
+              {popupNotifications.map((n) => (
                 <div key={n.id} className="shadow-neu-inset rounded-xl bg-muted/20 p-3 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-heading font-bold text-foreground">{n.title}</p>
-                    <span className="text-[10px] text-muted-foreground">{n.time}</span>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-sm mt-0.5">{typeEmoji[n.type]}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-heading font-bold text-foreground truncate">{n.title}</p>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">{n.time}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">{n.desc}</p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">{n.desc}</p>
                 </div>
               ))}
             </div>
-            <Button
-              onClick={() => setShowNotifs(false)}
-              className="w-full rounded-xl gradient-primary text-primary-foreground"
+            <button
+              onClick={() => { setShowNotifs(false); navigate("/notifications"); }}
+              className="w-full text-center text-xs font-semibold text-primary py-2 hover:underline"
             >
-              Close
-            </Button>
+              See All Notifications →
+            </button>
           </div>
         </div>
       )}
