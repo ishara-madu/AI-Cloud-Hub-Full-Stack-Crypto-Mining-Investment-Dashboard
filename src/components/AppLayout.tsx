@@ -17,9 +17,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const location = useLocation();
 
-  const maskedPhone = user?.phone
-    ? user.phone.slice(0, 1) + "******" + user.phone.slice(-3)
-    : "7******402";
+  const maskedEmail = user?.email
+    ? user.email.split("@")[0].slice(0, 3) + "***@" + user.email.split("@")[1]
+    : "user@email.com";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -30,7 +30,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
               <User className="w-5 h-5 text-muted-foreground" />
             </div>
-            <span className="text-sm font-medium text-foreground">{maskedPhone}</span>
+            <span className="text-sm font-medium text-foreground">{maskedEmail}</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">EN / සිංහල</span>

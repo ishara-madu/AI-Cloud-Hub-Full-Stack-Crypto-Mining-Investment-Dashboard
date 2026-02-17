@@ -11,7 +11,7 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [otp, setOtp] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const [referralCode, setReferralCode] = useState(searchParams.get("ref") || "");
@@ -59,24 +59,18 @@ const Register = () => {
           </div>
 
           <div className="space-y-1">
-            <Label className="text-sm font-medium">Phone / Email</Label>
-            <div className="flex">
-              <span className="inline-flex items-center px-3 rounded-l-xl bg-muted border border-r-0 border-input text-xs text-muted-foreground">+94</span>
-              <Input type="email" placeholder="you@example.com" className="rounded-l-none rounded-r-xl h-11 shadow-neu-inset bg-muted/30" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
+            <Label className="text-sm font-medium">Email</Label>
+            <Input type="email" placeholder="you@example.com" className="rounded-xl h-11 shadow-neu-inset bg-muted/30" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">Phone (optional)</Label>
+            <Input type="tel" placeholder="+94 7X XXX XXXX" className="rounded-xl h-11 shadow-neu-inset bg-muted/30" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
 
           <div className="space-y-1">
             <Label className="text-sm font-medium">Password</Label>
             <Input type="password" placeholder="••••••••" className="rounded-xl h-11 shadow-neu-inset bg-muted/30" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-
-          <div className="space-y-1">
-            <Label className="text-sm font-medium">SMS OTP</Label>
-            <div className="flex gap-2">
-              <Input placeholder="Enter OTP" className="rounded-xl h-11 shadow-neu-inset bg-muted/30 flex-1" value={otp} onChange={(e) => setOtp(e.target.value)} />
-              <Button type="button" variant="outline" className="rounded-xl h-11 text-xs whitespace-nowrap px-3 text-primary border-primary">Send</Button>
-            </div>
           </div>
 
           <div className="space-y-1">

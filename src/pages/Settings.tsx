@@ -53,7 +53,9 @@ const Settings = () => {
     if (error) toast.error(error.message); else { toast.success("Password changed!"); setNewPassword(""); setConfirmPassword(""); setActiveSection(null); }
   };
 
-  const maskedPhone = phone || user?.phone || "7******402";
+  const maskedEmail = user?.email
+    ? user.email.split("@")[0].slice(0, 3) + "***@" + user.email.split("@")[1]
+    : "user@email.com";
 
   if (loading) return <div className="px-4 py-4 space-y-4"><Skeleton className="h-32 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
 
@@ -71,7 +73,7 @@ const Settings = () => {
           </div>
           <div>
             <p className="text-lg font-heading font-bold text-foreground">{displayName || "User"}</p>
-            <p className="text-sm text-muted-foreground font-mono">{maskedPhone}</p>
+            <p className="text-sm text-muted-foreground">{maskedEmail}</p>
             <Badge className="gradient-primary text-primary-foreground text-[10px] mt-1">VIP Level 1</Badge>
           </div>
         </div>
@@ -152,7 +154,7 @@ const Settings = () => {
               <Input className="rounded-xl h-11 shadow-neu-inset bg-muted/30" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Phone</Label>
+              <Label className="text-xs">Phone (optional)</Label>
               <Input className="rounded-xl h-11 shadow-neu-inset bg-muted/30" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+94 7X XXX XXXX" />
             </div>
           </div>

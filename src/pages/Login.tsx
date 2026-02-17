@@ -38,18 +38,15 @@ const Login = () => {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Phone / Email</Label>
-            <div className="flex">
-              <span className="inline-flex items-center px-3 rounded-l-xl bg-muted border border-r-0 border-input text-xs text-muted-foreground">+94</span>
-              <Input
-                type="email"
-                placeholder="you@example.com"
-                className="rounded-l-none rounded-r-xl h-12 shadow-neu-inset bg-muted/30"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+            <Label className="text-sm font-medium">Email</Label>
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              className="rounded-xl h-12 shadow-neu-inset bg-muted/30"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-2">
