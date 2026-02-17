@@ -43,10 +43,14 @@ const Register = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) { logDevice(session.user.id, "signup"); }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+        logDevice(session.user.id, "signup");
+        navigate("/dashboard", { replace: true });
+      }
     });
-  }, []);
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
