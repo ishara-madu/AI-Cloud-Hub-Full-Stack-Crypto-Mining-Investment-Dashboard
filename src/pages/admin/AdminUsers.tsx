@@ -117,14 +117,15 @@ const AdminUsers = () => {
   };
 
   const handleDecreaseCreditScore = async (userId: string, currentScore: number) => {
-    const newScore = Math.max(0, currentScore - 10);
+    const decrease = Math.max(1, Math.round(currentScore * 0.10));
+    const newScore = Math.max(0, currentScore - decrease);
     await supabase.from("profiles").update({ credit_score: newScore }).eq("user_id", userId);
     await supabase.from("notifications").insert({
       user_id: userId, type: "security",
       title: "Credit Score Decreased",
-      description: `Your credit score has been decreased to ${newScore}%. Please maintain good account behavior.`,
+      description: `Your credit score has been decreased by ${decrease}% to ${newScore}%. Please maintain good account behavior.`,
     });
-    toast.success(`Credit score decreased to ${newScore}%`);
+    toast.success(`Credit score: ${currentScore}% → ${newScore}% (-${decrease}%)`);
     fetchUsers();
   };
 
