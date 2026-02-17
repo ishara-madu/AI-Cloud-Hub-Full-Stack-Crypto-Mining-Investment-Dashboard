@@ -73,12 +73,12 @@ const generateMarqueeMsg = () => {
 
 const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
 
-const quickActions = [
+const quickActions: { label: string; icon: any; path: string; dot?: boolean; external?: string }[] = [
   { label: "Sign-in", icon: CalendarCheck, path: "/daily-signin", dot: true },
-  { label: "Group", icon: Send, path: "#telegram" },
+  { label: "Group", icon: Send, path: "#telegram", external: "https://t.me/aicloudhub" },
   { label: "Deposit", icon: Wallet, path: "/deposit" },
   { label: "Cash Out", icon: Banknote, path: "/withdraw" },
-  { label: "Support", icon: Headphones, path: "/settings" },
+  { label: "Support", icon: Headphones, path: "#support", external: "https://wa.me/94771234567" },
   { label: "About Us", icon: Info, path: "/about" },
 ];
 
@@ -265,13 +265,13 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "AI DB Rental", value: 0 },
-              { label: "Package Sales", value: 0 },
+              { label: "AI DB Rental", value: userPackages.filter(p => (p.ai_packages as any)?.name?.toLowerCase().includes("db") || (p.ai_packages as any)?.name?.toLowerCase().includes("database")).reduce((s, p) => s + Math.round(p.price_paid * 0.05), 0) },
+              { label: "Package Sales", value: userPackages.reduce((s, p) => s + Math.round(p.price_paid * 0.05), 0) },
               { label: "Bonus Credits", value: 0 },
             ].map((item) => (
               <div key={item.label} className="shadow-neu rounded-xl bg-card p-3 text-center">
                 <p className="text-xs text-muted-foreground leading-tight">{item.label}</p>
-                <p className="text-sm font-heading font-bold text-foreground mt-1">Rs {item.value}</p>
+                <p className="text-sm font-heading font-bold text-foreground mt-1">Rs {item.value.toLocaleString()}</p>
               </div>
             ))}
           </div>
@@ -324,21 +324,31 @@ const Dashboard = () => {
 
         {/* ═══════ QUICK ACTION GRID ═══════ */}
         <div className="grid grid-cols-3 gap-3">
-          {quickActions.map((action) => (
-            <Link
-              key={action.label}
-              to={action.path}
-              className="flex flex-col items-center gap-1.5 py-3 bg-card rounded-2xl shadow-neu hover:shadow-card-hover transition-shadow"
-            >
-              <div className="relative w-11 h-11 rounded-full gradient-primary flex items-center justify-center">
-                <action.icon className="w-5 h-5 text-primary-foreground" />
-                {action.dot && (
-                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-destructive rounded-full border-2 border-card" />
-                )}
+          {quickActions.map((action) => {
+            const content = (
+              <div className="flex flex-col items-center gap-1.5 py-3 bg-card rounded-2xl shadow-neu hover:shadow-card-hover transition-shadow">
+                <div className="relative w-11 h-11 rounded-full gradient-primary flex items-center justify-center">
+                  <action.icon className="w-5 h-5 text-primary-foreground" />
+                  {action.dot && (
+                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-destructive rounded-full border-2 border-card" />
+                  )}
+                </div>
+                <span className="text-[11px] font-medium text-foreground">{action.label}</span>
               </div>
-              <span className="text-[11px] font-medium text-foreground">{action.label}</span>
-            </Link>
-          ))}
+            );
+            if (action.external) {
+              return (
+                <a key={action.label} href={action.external} target="_blank" rel="noopener noreferrer">
+                  {content}
+                </a>
+              );
+            }
+            return (
+              <Link key={action.label} to={action.path}>
+                {content}
+              </Link>
+            );
+          })}
         </div>
 
         {/* ═══════ AI PACKAGES MALL ═══════ */}

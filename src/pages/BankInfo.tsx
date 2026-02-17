@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,24 @@ const BankInfo = () => {
   const [branchCode, setBranchCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    if (!user) { setLoadingData(false); return; }
+    supabase.from("bank_accounts").select("*").eq("user_id", user.id).eq("is_default", true).maybeSingle().then(({ data }) => {
+      if (data) {
+        const bankMatch = data.bank_name.match(/^(.+?)\s*\(Branch:\s*(\d+)\)$/);
+        if (bankMatch) {
+          setBankName(bankMatch[1]);
+          setBranchCode(bankMatch[2]);
+        } else {
+          setBankName(data.bank_name);
+        }
+        setAccountNumber(data.account_number);
+      }
+      setLoadingData(false);
+    });
+  }, [user]);
 
   const handleSave = async () => {
     if (!holderName.trim()) { toast.error("Account holder name is required"); return; }
