@@ -35,10 +35,10 @@ const BankInfo = () => {
 
   useEffect(() => {
     if (!user) { setLoadingData(false); return; }
-    supabase.from("bank_accounts").select("*").eq("user_id", user.id).eq("is_default", true).maybeSingle().then(({ data }) => {
+    supabase.from("bank_accounts").select("*").eq("user_id", user.id).eq("is_default", true).order("created_at", { ascending: false }).limit(1).then(({ data: rows }) => {
+      const data = rows && rows.length > 0 ? rows[0] : null;
       if (data) {
         setExistingId(data.id);
-        // Parse holder name from iban field (we store it there)
         setHolderName(data.iban || "");
         const bankMatch = data.bank_name.match(/^(.+?)\s*\(Branch:\s*(\d+)\)$/);
         if (bankMatch) {
