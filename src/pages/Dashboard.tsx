@@ -74,12 +74,12 @@ const generateMarqueeMsg = () => {
 const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
 
 const quickActions = [
-  { label: "Sign-in", icon: CalendarCheck, path: "/dashboard", dot: true },
+  { label: "Sign-in", icon: CalendarCheck, path: "/daily-signin", dot: true },
   { label: "Group", icon: Send, path: "#telegram" },
   { label: "Deposit", icon: Wallet, path: "/deposit" },
   { label: "Cash Out", icon: Banknote, path: "/withdraw" },
   { label: "Support", icon: Headphones, path: "/settings" },
-  { label: "Company", icon: Info, path: "/settings" },
+  { label: "About Us", icon: Info, path: "/about" },
 ];
 
 const Dashboard = () => {

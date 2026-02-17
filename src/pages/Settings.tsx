@@ -11,16 +11,14 @@ import {
   Loader2, User, Lock, CreditCard, Download, Headphones,
   Info, LogOut, Gift, Users, PieChart,
   Tag, Bell, ArrowDownToLine, ArrowUpFromLine, CloudDownload,
-  ShieldCheck, Shield
+  ShieldCheck
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-import { useAdmin } from "@/hooks/useAdmin";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
@@ -121,18 +119,13 @@ const Settings = () => {
     { label: "My Packages", icon: Gift, key: "packages", action: () => navigate("/packages") },
     { label: "Team Report", icon: Users, key: "team", action: () => navigate("/team") },
     { label: "Commission Details", icon: PieChart, key: "commission", action: () => navigate("/transactions") },
-    { label: "Redeem Code", icon: Tag, key: "redeem", action: () => toast.info("Coming soon!") },
+    { label: "Redeem Code", icon: Tag, key: "redeem", action: () => navigate("/redeem") },
     { label: "Message Center", icon: Bell, key: "messages", action: () => toast.info("No new messages") },
     { label: "Change Password", icon: Lock, key: "password", action: () => setActiveSection(activeSection === "password" ? null : "password") },
     { label: "Download App", icon: CloudDownload, key: "download", action: () => toast.info("Coming soon!") },
     { label: "Support", icon: Headphones, key: "support", action: () => window.open("https://wa.me/94771234567", "_blank") },
-    { label: "About Us", icon: Info, key: "about", action: () => setActiveSection(activeSection === "about" ? null : "about") },
+    { label: "About Us", icon: Info, key: "about", action: () => navigate("/about") },
   ];
-
-  // Add admin panel link if admin
-  if (isAdmin) {
-    gridItems.push({ label: "Admin Panel", icon: Shield, key: "admin", action: () => navigate("/admin") });
-  }
 
   if (loading) return <div className="px-4 py-4 space-y-4"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
 
@@ -235,16 +228,6 @@ const Settings = () => {
           </div>
         )}
 
-        {activeSection === "about" && (
-          <div className="shadow-neu rounded-2xl bg-card p-5 space-y-3 animate-fade-in">
-            <h3 className="text-sm font-heading font-bold text-foreground">About AICloudHub</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              AICloudHub is a premium AI services marketplace providing cutting-edge artificial intelligence solutions.
-              Rent GPU clusters, access vector databases, and earn through our referral program.
-            </p>
-            <p className="text-xs text-muted-foreground">support@aicloudhub.com</p>
-          </div>
-        )}
 
         {activeSection === "edit" && (
           <div className="shadow-neu rounded-2xl bg-card p-5 space-y-4 animate-fade-in">

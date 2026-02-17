@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge"; // VIP badge
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Home, Package, ShoppingCart, Users, User,
+  Home, Package, ShoppingCart, Users, User, Bell, X,
 } from "lucide-react";
 
 const bottomNav = [
@@ -14,30 +16,83 @@ const bottomNav = [
   { label: "My", icon: User, path: "/settings" },
 ];
 
+const notifications = [
+  { id: 1, title: "System Maintenance", desc: "Scheduled maintenance on Feb 20, 2am-4am IST.", time: "2h ago" },
+  { id: 2, title: "Bonus Received", desc: "You received Rs.100 signup bonus credits! 🎁", time: "5h ago" },
+  { id: 3, title: "New GPU Stock", desc: "Llama 3 GPU clusters are now available for rental.", time: "1d ago" },
+];
+
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const location = useLocation();
+  const [showNotifs, setShowNotifs] = useState(false);
 
   const maskedEmail = user?.email
     ? user.email.split("@")[0].slice(0, 3) + "***@" + user.email.split("@")[1]
     : "user@email.com";
 
+  const isProfilePage = location.pathname === "/settings";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Top header */}
-      <header className="sticky top-0 z-40 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-              <User className="w-5 h-5 text-muted-foreground" />
+      {/* Top header — hidden on Profile page */}
+      {!isProfilePage && (
+        <header className="sticky top-0 z-40 bg-card border-b border-border">
+          <div className="flex items-center justify-between px-4 h-14">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                <User className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <span className="text-sm font-medium text-foreground">{maskedEmail}</span>
+              <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[10px] px-1.5 py-0 font-bold">VIP 0</Badge>
             </div>
-            <span className="text-sm font-medium text-foreground">{maskedEmail}</span>
-            <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[10px] px-1.5 py-0 font-bold">VIP 0</Badge>
+            <button
+              onClick={() => setShowNotifs(true)}
+              className="relative w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center"
+            >
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-card" />
+            </button>
+          </div>
+        </header>
+      )}
+
+      {/* Notification Modal */}
+      {showNotifs && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-6" onClick={() => setShowNotifs(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full max-w-sm shadow-neu rounded-2xl bg-card p-5 space-y-4 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-heading font-bold text-foreground">🔔 Notifications</h3>
+              <button onClick={() => setShowNotifs(false)} className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {notifications.map((n) => (
+                <div key={n.id} className="shadow-neu-inset rounded-xl bg-muted/20 p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-heading font-bold text-foreground">{n.title}</p>
+                    <span className="text-[10px] text-muted-foreground">{n.time}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{n.desc}</p>
+                </div>
+              ))}
+            </div>
+            <Button
+              onClick={() => setShowNotifs(false)}
+              className="w-full rounded-xl gradient-primary text-primary-foreground"
+            >
+              Close
+            </Button>
           </div>
         </div>
-      </header>
+      )}
 
-      {/* Page content — padded for bottom nav */}
+      {/* Page content */}
       <main className="flex-1 pb-20 overflow-y-auto">
         {children}
       </main>

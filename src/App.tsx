@@ -18,6 +18,9 @@ import Transactions from "./pages/Transactions";
 import Team from "./pages/Team";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import DailySignIn from "./pages/DailySignIn";
+import About from "./pages/About";
+import Redeem from "./pages/Redeem";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -55,6 +58,9 @@ const App = () => (
             <Route path="/transactions" element={<ProtectedPage><Transactions /></ProtectedPage>} />
             <Route path="/team" element={<ProtectedPage><Team /></ProtectedPage>} />
             <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
+            <Route path="/daily-signin" element={<ProtectedPage><DailySignIn /></ProtectedPage>} />
+            <Route path="/about" element={<ProtectedPage><About /></ProtectedPage>} />
+            <Route path="/redeem" element={<ProtectedPage><Redeem /></ProtectedPage>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
             <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
