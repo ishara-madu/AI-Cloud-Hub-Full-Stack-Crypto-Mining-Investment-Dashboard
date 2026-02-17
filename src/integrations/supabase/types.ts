@@ -214,31 +214,49 @@ export type Database = {
       }
       device_logs: {
         Row: {
+          audio_hash: string | null
+          canvas_hash: string | null
           created_at: string
           event_type: string
           fingerprint: string | null
+          fonts_hash: string | null
           id: string
           ip_address: string | null
+          screen_info: string | null
+          timezone: string | null
           user_agent: string | null
           user_id: string
+          webgl_hash: string | null
         }
         Insert: {
+          audio_hash?: string | null
+          canvas_hash?: string | null
           created_at?: string
           event_type?: string
           fingerprint?: string | null
+          fonts_hash?: string | null
           id?: string
           ip_address?: string | null
+          screen_info?: string | null
+          timezone?: string | null
           user_agent?: string | null
           user_id: string
+          webgl_hash?: string | null
         }
         Update: {
+          audio_hash?: string | null
+          canvas_hash?: string | null
           created_at?: string
           event_type?: string
           fingerprint?: string | null
+          fonts_hash?: string | null
           id?: string
           ip_address?: string | null
+          screen_info?: string | null
+          timezone?: string | null
           user_agent?: string | null
           user_id?: string
+          webgl_hash?: string | null
         }
         Relationships: []
       }

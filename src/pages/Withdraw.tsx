@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 const Withdraw = () => {
   const { user } = useAuth();
   const [balance, setBalance] = useState(0);
+  const [totalDeposited, setTotalDeposited] = useState(0);
   const [amount, setAmount] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -22,17 +23,19 @@ const Withdraw = () => {
   const [submitted, setSubmitted] = useState(false);
   const [hasActivePackage, setHasActivePackage] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
+  const hasMinDeposit = totalDeposited >= 500;
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
       const [walletRes, bankRes, pkgRes, profileRes] = await Promise.all([
-        supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle(),
+        supabase.from("wallets").select("balance, total_deposited").eq("user_id", user.id).maybeSingle(),
         supabase.from("bank_accounts").select("id, bank_name, account_number").eq("user_id", user.id).eq("is_default", true).maybeSingle(),
         supabase.from("user_packages").select("id").eq("user_id", user.id).eq("is_active", true).limit(1),
         supabase.from("profiles").select("is_frozen").eq("user_id", user.id).maybeSingle(),
       ]);
       setBalance(walletRes.data?.balance ? Number(walletRes.data.balance) : 0);
+      setTotalDeposited(walletRes.data?.total_deposited ? Number(walletRes.data.total_deposited) : 0);
       if (bankRes.data) {
         setBankName(bankRes.data.bank_name || "");
         setAccountNumber(bankRes.data.account_number || "");
@@ -50,6 +53,7 @@ const Withdraw = () => {
     e.preventDefault();
     if (isFrozen) { toast.error("Your account is frozen. Contact support."); return; }
     if (!hasActivePackage) { toast.error("You need an active package to withdraw."); return; }
+    if (!hasMinDeposit) { toast.error("You must deposit at least Rs 500 before withdrawing."); return; }
     if (!hasBankDetails) { toast.error("Please save your bank details first."); return; }
     const amt = parseFloat(amount);
     if (!amt || amt < 1000) { toast.error("Minimum withdrawal: Rs 1,000"); return; }
@@ -115,6 +119,17 @@ const Withdraw = () => {
               <p className="text-sm text-yellow-600 font-medium">Active package required</p>
               <p className="text-xs text-muted-foreground">You must have at least one active package to withdraw.</p>
               <Link to="/packages" className="text-xs text-primary font-semibold underline">Browse Packages</Link>
+            </div>
+          </div>
+        )}
+
+        {!hasMinDeposit && !isFrozen && hasActivePackage && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
+            <div>
+              <p className="text-sm text-yellow-600 font-medium">Minimum deposit required</p>
+              <p className="text-xs text-muted-foreground">You must deposit at least Rs 500 before making a withdrawal. Current deposits: Rs {totalDeposited.toLocaleString()}.</p>
+              <Link to="/deposit" className="text-xs text-primary font-semibold underline">Make a Deposit</Link>
             </div>
           </div>
         )}
@@ -186,7 +201,7 @@ const Withdraw = () => {
             type="submit"
             className="w-full rounded-xl h-12 font-semibold text-base text-destructive-foreground"
             style={{ background: "linear-gradient(135deg, hsl(0 72% 51%), hsl(340 82% 52%))" }}
-            disabled={loading || isFrozen || !hasActivePackage || !hasBankDetails}
+            disabled={loading || isFrozen || !hasActivePackage || !hasBankDetails || !hasMinDeposit}
           >
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Submit Withdrawal Request

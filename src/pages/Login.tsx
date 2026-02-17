@@ -8,30 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Cloud } from "lucide-react";
-
-const getFingerprint = () => {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  if (ctx) { ctx.textBaseline = "top"; ctx.font = "14px Arial"; ctx.fillText("fingerprint", 2, 2); }
-  const canvasData = canvas.toDataURL();
-  const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const plugins = navigator.plugins ? Array.from(navigator.plugins).map(p => p.name).join(",") : "";
-  const raw = `${navigator.userAgent}|${screen}|${tz}|${navigator.language}|${plugins}|${canvasData}`;
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
-  return Math.abs(hash).toString(36);
-};
-
-const logDevice = async (userId: string, eventType: string) => {
-  const fingerprint = getFingerprint();
-  try {
-    const ipRes = await fetch("https://api.ipify.org?format=json").then(r => r.json()).catch(() => ({ ip: "unknown" }));
-    await supabase.from("device_logs").insert({
-      user_id: userId, ip_address: ipRes.ip, user_agent: navigator.userAgent, fingerprint, event_type: eventType,
-    });
-  } catch { /* silent */ }
-};
+import { logDeviceAdvanced } from "@/lib/fingerprint";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -43,7 +20,7 @@ const Login = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-        logDevice(session.user.id, "login");
+        logDeviceAdvanced(session.user.id, "login", supabase);
         navigate("/dashboard", { replace: true });
       }
     });
@@ -58,7 +35,7 @@ const Login = () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) { toast.error(error.message); } else {
-      if (data.user) await logDevice(data.user.id, "login");
+      if (data.user) await logDeviceAdvanced(data.user.id, "login", supabase);
       navigate("/dashboard");
     }
   };

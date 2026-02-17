@@ -7,31 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Cloud } from "lucide-react";
-
-const getFingerprint = () => {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  if (ctx) { ctx.textBaseline = "top"; ctx.font = "14px Arial"; ctx.fillText("fingerprint", 2, 2); }
-  const canvasData = canvas.toDataURL();
-  const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const plugins = navigator.plugins ? Array.from(navigator.plugins).map(p => p.name).join(",") : "";
-  const raw = `${navigator.userAgent}|${screen}|${tz}|${navigator.language}|${plugins}|${canvasData}`;
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
-  return Math.abs(hash).toString(36);
-};
-
-const logDevice = async (userId: string, eventType: string) => {
-  const fingerprint = getFingerprint();
-  try {
-    const ipRes = await fetch("https://api.ipify.org?format=json").then(r => r.json()).catch(() => ({ ip: "unknown" }));
-    await supabase.from("device_logs").insert({
-      user_id: userId, ip_address: ipRes.ip, user_agent: navigator.userAgent, fingerprint, event_type: eventType,
-    });
-  } catch { /* silent */ }
-};
+import { Loader2, Cloud, ShieldAlert } from "lucide-react";
+import { logDeviceAdvanced, checkDuplicateDevice } from "@/lib/fingerprint";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -47,7 +24,7 @@ const Register = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-        logDevice(session.user.id, "signup");
+        logDeviceAdvanced(session.user.id, "signup", supabase);
         navigate("/dashboard", { replace: true });
       }
     });
@@ -61,6 +38,15 @@ const Register = () => {
     if (!referralCode.trim()) { toast.error("Invitation code is required"); return; }
     if (!privacyAccepted) { toast.error("Please accept the Privacy Policy to continue"); return; }
     setLoading(true);
+
+    // Check for duplicate device fingerprints
+    const dupCheck = await checkDuplicateDevice(supabase);
+    if (dupCheck.isDuplicate) {
+      toast.error("Registration blocked: This device is already associated with an existing account. Multiple accounts are not allowed.");
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(), password,
       options: {
@@ -70,7 +56,7 @@ const Register = () => {
     });
     setLoading(false);
     if (error) { toast.error(error.message); } else {
-      if (data.user) await logDevice(data.user.id, "signup");
+      if (data.user) await logDeviceAdvanced(data.user.id, "signup", supabase);
       toast.success("Account created! Check your email to verify.");
       navigate("/login");
     }
