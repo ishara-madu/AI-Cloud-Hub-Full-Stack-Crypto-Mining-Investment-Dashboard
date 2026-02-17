@@ -49,7 +49,7 @@ const Team = () => {
   return (
     <div className="animate-fade-in">
       <div className="px-4 py-4">
-        <h1 className="text-lg font-heading font-bold text-foreground mb-4">My Team (මගේ කණ්ඩායම)</h1>
+        <h1 className="text-lg font-heading font-bold text-foreground mb-4">My Team</h1>
       </div>
 
       <div className="px-4 space-y-5 pb-8">
@@ -98,7 +98,6 @@ const Team = () => {
               <Users className="w-8 h-8 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground">Invite friends to earn 12% commission!</p>
-            <p className="text-xs text-muted-foreground mt-1">(මිතුරන්ට ආරාධනා කරන්න)</p>
           </div>
         ) : (
           <div className="space-y-2">

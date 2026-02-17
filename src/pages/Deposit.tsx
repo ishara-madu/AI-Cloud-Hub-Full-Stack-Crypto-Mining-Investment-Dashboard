@@ -109,7 +109,7 @@ const Deposit = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <h1 className="text-lg font-heading font-bold text-foreground">Deposit (තැන්පත් කරන්න)</h1>
+        <h1 className="text-lg font-heading font-bold text-foreground">Deposit</h1>
       </div>
 
       <div className="px-4 space-y-5 pb-8">
@@ -198,7 +198,6 @@ const Deposit = () => {
                     <Camera className="w-6 h-6 text-primary" />
                   </div>
                   <p className="text-sm text-muted-foreground">Tap to upload payment slip</p>
-                  <p className="text-xs text-muted-foreground">(රිසිට්පත මෙතැනට දමන්න)</p>
                   <Upload className="w-4 h-4 text-muted-foreground" />
                 </div>
               </label>

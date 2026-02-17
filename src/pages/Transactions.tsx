@@ -34,7 +34,7 @@ const Transactions = () => {
   const filtered = activeTab === "all"
     ? transactions
     : activeTab === "earnings"
-      ? transactions.filter(t => t.type === "commission")
+      ? transactions.filter(t => t.type === "commission" || t.type === "refund")
       : transactions.filter(t => t.type === activeTab);
 
   const isIncome = (t: string) => t === "deposit" || t === "commission" || t === "refund";

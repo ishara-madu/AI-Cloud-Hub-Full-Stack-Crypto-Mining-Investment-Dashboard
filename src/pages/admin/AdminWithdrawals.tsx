@@ -64,6 +64,17 @@ const AdminWithdrawals = () => {
           balance: Number(wallet.balance) + amount,
         }).eq("user_id", userId);
       }
+      // Update existing pending withdrawal transaction to rejected
+      await supabase.from("transactions").update({ status: "rejected", description: "Withdrawal rejected by admin" })
+        .eq("user_id", userId).eq("type", "withdrawal").eq("status", "pending");
+      // Fallback: insert if no matching pending transaction found
+      const { data: existingTx } = await supabase.from("transactions").select("id").eq("user_id", userId).eq("type", "withdrawal").eq("status", "rejected").limit(1);
+      if (!existingTx || existingTx.length === 0) {
+        await supabase.from("transactions").insert({
+          user_id: userId, type: "withdrawal", amount, status: "rejected",
+          description: "Withdrawal rejected by admin",
+        });
+      }
       await supabase.from("notifications").insert({
         user_id: userId, type: "money",
         title: "Withdrawal Rejected ❌",

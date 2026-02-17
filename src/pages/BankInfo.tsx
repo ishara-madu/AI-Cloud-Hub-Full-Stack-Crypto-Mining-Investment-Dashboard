@@ -88,7 +88,7 @@ const BankInfo = () => {
           </button>
           <div>
             <h1 className="text-lg font-heading font-bold text-foreground">Bind Bank Card</h1>
-            <p className="text-xs text-muted-foreground">බැංකු විස්තර</p>
+            <p className="text-xs text-muted-foreground">Bank Details</p>
           </div>
         </div>
 

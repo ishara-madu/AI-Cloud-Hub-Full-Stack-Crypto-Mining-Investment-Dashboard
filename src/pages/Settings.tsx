@@ -32,6 +32,7 @@ const Settings = () => {
   const [creditScore, setCreditScore] = useState(100);
   const [isFrozen, setIsFrozen] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Password
   const [newPassword, setNewPassword] = useState("");
@@ -39,6 +40,8 @@ const Settings = () => {
   const [changingPw, setChangingPw] = useState(false);
 
   const userId = user?.id;
+  const isGoogleUser = user?.app_metadata?.provider === "google" || user?.app_metadata?.providers?.includes("google");
+  const googleAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
 
   useEffect(() => {
     if (!userId) return;
@@ -48,13 +51,11 @@ const Settings = () => {
       const todayISO = today.toISOString();
 
       const [profileRes, walletRes, frozenRes, todayComRes, userPkgRes] = await Promise.all([
-        supabase.from("profiles").select("display_name, phone, credit_score, is_frozen, referral_code").eq("user_id", userId).maybeSingle(),
+        supabase.from("profiles").select("display_name, phone, credit_score, is_frozen, referral_code, avatar_url").eq("user_id", userId).maybeSingle(),
         supabase.from("wallets").select("balance, total_deposited, total_withdrawn, total_commission").eq("user_id", userId).maybeSingle(),
-        // Frozen = sum of pending withdrawal amounts
         supabase.from("withdrawal_requests").select("amount").eq("user_id", userId).eq("status", "pending"),
-        // Today's earnings = commissions created today
-        supabase.from("commissions").select("amount").eq("user_id", userId).gte("created_at", todayISO),
-        // Total packages paid for VIP progress
+        // Today's earnings = daily package income (5% of active packages price_paid)
+        supabase.from("user_packages").select("price_paid").eq("user_id", userId).eq("is_active", true),
         supabase.from("user_packages").select("price_paid").eq("user_id", userId),
       ]);
 
@@ -64,14 +65,16 @@ const Settings = () => {
         setCreditScore(profileRes.data.credit_score ?? 100);
         setIsFrozen(profileRes.data.is_frozen || false);
         setReferralCode(profileRes.data.referral_code || "");
+        setAvatarUrl(profileRes.data.avatar_url || null);
       }
       if (walletRes.data) setWalletData(walletRes.data as any);
 
       const frozen = (frozenRes.data || []).reduce((s, w) => s + Number(w.amount), 0);
       setFrozenAmount(frozen);
 
-      const todayEarn = (todayComRes.data || []).reduce((s, c) => s + Number(c.amount), 0);
-      setTodayEarnings(todayEarn);
+      // Today's earnings = sum of daily income from active packages (5% of price_paid per day)
+      const dailyEarn = (todayComRes.data || []).reduce((s, p) => s + Math.round(Number(p.price_paid) * 0.05), 0);
+      setTodayEarnings(dailyEarn);
 
       const totalPkg = (userPkgRes.data || []).reduce((s, p) => s + Number(p.price_paid), 0);
       setTotalPackagesPaid(totalPkg);
@@ -123,18 +126,27 @@ const Settings = () => {
     { label: "Bank Info", icon: CreditCard, key: "bank", action: () => navigate("/bank-info") },
     { label: "Deposit History", icon: ArrowDownToLine, key: "deposit-history", action: () => navigate("/transactions") },
     { label: "Withdraw History", icon: ArrowUpFromLine, key: "withdraw-history", action: () => navigate("/transactions") },
-    { label: "My Packages", icon: Gift, key: "packages", action: () => navigate("/packages") },
+    { label: "My Packages", icon: Gift, key: "packages", action: () => navigate("/packages?section=my-packages") },
     { label: "Team Report", icon: Users, key: "team", action: () => navigate("/team") },
     { label: "Commission Details", icon: PieChart, key: "commission", action: () => navigate("/commission-details") },
     { label: "Redeem Code", icon: Tag, key: "redeem", action: () => navigate("/redeem") },
     { label: "Message Center", icon: Bell, key: "messages", action: () => navigate("/notifications") },
-    { label: "Change Password", icon: Lock, key: "password", action: () => setActiveSection(activeSection === "password" ? null : "password") },
+    ...(isGoogleUser ? [] : [{ label: "Change Password", icon: Lock, key: "password", action: () => setActiveSection(activeSection === "password" ? null : "password") }]),
     { label: "Download App", icon: CloudDownload, key: "download", action: () => toast.info("Coming soon!") },
     { label: "Support", icon: Headphones, key: "support", action: () => window.open("https://wa.me/94771234567", "_blank") },
     { label: "About Us", icon: Info, key: "about", action: () => navigate("/about") },
   ];
 
   if (loading) return <div className="px-4 py-4 space-y-4"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
+
+  // Profile avatar: Google pic or name initial
+  const profileAvatar = isGoogleUser && googleAvatar ? (
+    <img src={googleAvatar} alt="Profile" className="w-16 h-16 rounded-full object-cover shadow-lg" />
+  ) : (
+    <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-lg text-primary-foreground text-xl font-bold">
+      {(displayName || "U").charAt(0).toUpperCase()}
+    </div>
+  );
 
   return (
     <div className="animate-fade-in">
@@ -145,9 +157,9 @@ const Settings = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setActiveSection(activeSection === "edit" ? null : "edit")}
-              className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-lg shrink-0"
+              className="shrink-0"
             >
-              <User className="w-8 h-8 text-primary-foreground" />
+              {profileAvatar}
             </button>
             <div className="flex-1 min-w-0">
               <p className="text-base font-heading font-bold text-foreground truncate">{displayName || "User"}</p>
@@ -224,7 +236,7 @@ const Settings = () => {
         </div>
 
         {/* ===== Expandable Sections ===== */}
-        {activeSection === "password" && (
+        {activeSection === "password" && !isGoogleUser && (
           <div className="shadow-neu rounded-2xl bg-card p-5 space-y-4 animate-fade-in">
             <h3 className="text-sm font-heading font-bold text-foreground">Change Password</h3>
             <div className="space-y-3">
