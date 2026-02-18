@@ -109,7 +109,6 @@ const Dashboard = () => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [dailyCheckedIn, setDailyCheckedIn] = useState(false);
   const [todayPackageIncome, setTodayPackageIncome] = useState(0);
-  const [totalPackageEarned, setTotalPackageEarned] = useState(0);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -131,7 +130,7 @@ const Dashboard = () => {
       const todayStartUtc = new Date();
       todayStartUtc.setUTCHours(0, 0, 0, 0);
 
-      const [walletRes, pkgRes, profileRes, upRes, bannersRes, todayIncomeRes, totalIncomeRes, todayAllCommRes] = await Promise.all([
+      const [walletRes, pkgRes, profileRes, upRes, bannersRes, todayIncomeRes, todayAllCommRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("ai_packages").select("*").order("price_monthly", { ascending: true }),
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
@@ -139,8 +138,6 @@ const Dashboard = () => {
         supabase.from("slider_banners").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
         // Today's credited package income (UTC-aligned)
         supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStartUtc.toISOString()),
-        // Total ever credited package income
-        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%"),
         // Today's ALL commission (package income + referral) for "Today Earned" display
         supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStartUtc.toISOString()),
       ]);
@@ -155,12 +152,9 @@ const Dashboard = () => {
 
       // Today's package income from DB (UTC-aligned)
       const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
-      // Total ever credited package income from DB
-      const totalIncome = (totalIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
       // Today's total commissions (package + referral)
       const todayAllComm = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
       setTodayPackageIncome(todayIncome);
-      setTotalPackageEarned(totalIncome);
       // commissionTotal = today's full earned (package income + referral commissions)
       setCommissionTotal(todayAllComm);
 
@@ -347,22 +341,38 @@ const Dashboard = () => {
               <Clock className="w-3 h-3" /> Refreshes in {countdown}
             </span>
           </div>
-          <div className="shadow-neu rounded-2xl bg-card p-4 mb-3">
-            <p className="text-3xl font-heading font-bold text-foreground">
-              Rs {(wallet?.balance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0 })}
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: "Today Earned", value: commissionTotal, color: "text-success" },
-              { label: "Pkg Income", value: todayPackageIncome, color: "text-primary" },
-              { label: "Total Earned", value: totalPackageEarned, color: "text-foreground" },
-            ].map((item) => (
-              <div key={item.label} className="shadow-neu rounded-xl bg-card p-3 text-center">
-                <p className="text-xs text-muted-foreground leading-tight">{item.label}</p>
-                <p className={`text-sm font-heading font-bold mt-1 ${item.color}`}>Rs {item.value.toLocaleString()}</p>
+          {/* Balance + today's income summary */}
+          <div className="shadow-neu rounded-2xl bg-card p-4 mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-0.5">Account Balance</p>
+              <p className="text-2xl font-heading font-bold text-foreground">
+                Rs {(wallet?.balance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0 })}
+              </p>
+            </div>
+            {todayPackageIncome > 0 && (
+              <div className="text-right">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Credited Today</p>
+                <p className="text-base font-heading font-bold text-success">+Rs {todayPackageIncome.toLocaleString()}</p>
               </div>
-            ))}
+            )}
+          </div>
+          {/* Three distinct stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="shadow-neu rounded-xl bg-card p-3 text-center">
+              <p className="text-[10px] text-muted-foreground leading-tight">Today Earned</p>
+              <p className="text-sm font-heading font-bold mt-1 text-success">Rs {commissionTotal.toLocaleString()}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Pkg + Referrals</p>
+            </div>
+            <div className="shadow-neu rounded-xl bg-card p-3 text-center">
+              <p className="text-[10px] text-muted-foreground leading-tight">Today Pkg</p>
+              <p className="text-sm font-heading font-bold mt-1 text-primary">Rs {todayPackageIncome.toLocaleString()}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Package only</p>
+            </div>
+            <div className="shadow-neu rounded-xl bg-card p-3 text-center">
+              <p className="text-[10px] text-muted-foreground leading-tight">Total Earned</p>
+              <p className="text-sm font-heading font-bold mt-1 text-foreground">Rs {(wallet?.total_commission ?? 0).toLocaleString()}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">All time</p>
+            </div>
           </div>
         </div>
 

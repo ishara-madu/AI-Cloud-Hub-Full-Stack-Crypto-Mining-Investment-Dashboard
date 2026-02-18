@@ -103,7 +103,8 @@ const Packages = () => {
     if (error) { toast.error("Failed to purchase package"); setBuying(null); return; }
     const result = data as any;
     if (!result?.success) { toast.error(result?.error || "Purchase failed"); setBuying(null); return; }
-    toast.success(`Successfully purchased ${pkg.name}!`);
+    const dailyIncome = result.daily_income ?? 0;
+    toast.success(`✅ ${pkg.name} purchased! +Rs.${dailyIncome.toLocaleString()} first-day income credited!`);
     // Refresh user packages with actual earned amounts
     const upRes = await supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).order("purchased_at", { ascending: false });
     const rawUserPkgs = (upRes.data || []) as UserPackage[];
@@ -113,6 +114,9 @@ const Packages = () => {
     setUserPackages(rawUserPkgs.map((up) => ({ ...up, actualEarned: totalInvested > 0 ? Math.round((Number(up.price_paid) / totalInvested) * totalEarned) : 0 })));
     setBuying(null);
   };
+
+  // Set of package_ids the user already actively owns
+  const ownedPackageIds = new Set(userPackages.filter(up => up.is_active).map(up => up.package_id));
 
   const filterCategory = (name: string) => {
     if (activeTab === "all") return true;
@@ -154,6 +158,7 @@ const Packages = () => {
         <div className="grid grid-cols-2 gap-3">
           {filteredPkgs.map((pkg, idx) => {
             const isComingSoon = !pkg.is_active;
+            const isOwned = ownedPackageIds.has(pkg.id);
             const price = pkg.price_onetime || pkg.price_monthly || 0;
             const dailyIncome = Math.round(price * 0.05);
             const totalRevenue = dailyIncome * (pkg.duration_days || 30);
@@ -197,6 +202,8 @@ const Packages = () => {
                       <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-lg block text-center">Coming soon</span>
                     ) : isSoldOut ? (
                       <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-lg block text-center">Sold Out</span>
+                    ) : isOwned ? (
+                      <span className="text-[10px] text-success bg-success/10 border border-success/30 px-2 py-1 rounded-lg block text-center font-semibold">✓ Active</span>
                     ) : (
                       <Button
                         size="sm"
