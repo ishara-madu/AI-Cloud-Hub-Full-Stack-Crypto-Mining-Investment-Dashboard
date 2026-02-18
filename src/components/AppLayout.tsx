@@ -66,7 +66,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const isProfilePage = location.pathname === "/settings";
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-white flex justify-center">
+    <div className="w-full max-w-[425px] min-h-screen bg-background flex flex-col relative">
       {/* Top header — hidden on Profile page */}
       {!isProfilePage && (
         <header className="sticky top-0 z-40 bg-card border-b border-border">
@@ -202,8 +203,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       </main>
 
       {/* Bottom navigation bar */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-card border-t border-border safe-area-bottom">
-        <div className="flex items-center justify-around h-16">
+      <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center bg-white border-t border-border safe-area-bottom">
+        <div className="flex items-center justify-around h-16 w-full max-w-[425px] bg-card">
           {bottomNav.map((item) => {
             const active = location.pathname === item.path;
             return (
@@ -222,6 +223,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           })}
         </div>
       </nav>
+    </div>
     </div>
   );
 };
