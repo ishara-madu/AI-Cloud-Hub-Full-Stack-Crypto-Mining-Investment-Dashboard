@@ -1,5 +1,4 @@
 import { useState } from "react";
-import logo from "@/assets/logo.png";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, ArrowDownToLine, ArrowUpFromLine,
@@ -41,11 +40,10 @@ const SidebarContent = ({ onClose }: { onClose?: () => void }) => {
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <img src={logo} alt="AI Cloud Hub" className="w-8 h-8 object-contain" />
-          <div>
-            <span className="font-heading font-bold text-foreground text-sm block">AI Cloud Hub</span>
-            <span className="text-[10px] text-muted-foreground">Admin Panel</span>
+          <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center">
+            <LayoutDashboard className="w-4 h-4 text-primary-foreground" />
           </div>
+          <span className="font-heading font-bold text-foreground text-sm">Admin Panel</span>
         </div>
         {onClose && (
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted text-muted-foreground">
@@ -127,11 +125,10 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">
-              <img src={logo} alt="AI Cloud Hub" className="w-7 h-7 object-contain" />
-              <div>
-                <span className="font-heading font-bold text-sm text-foreground block leading-tight">AI Cloud Hub</span>
-                <span className="text-[10px] text-muted-foreground leading-tight">Admin Panel</span>
+              <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center">
+                <LayoutDashboard className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
+              <span className="font-heading font-bold text-sm text-foreground">Admin Panel</span>
             </div>
           </div>
           <AdminNotificationBell />

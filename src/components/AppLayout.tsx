@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import logo from "@/assets/logo.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,24 +75,21 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {!isProfilePage && (
         <header className="sticky top-0 z-40 bg-card border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="AI Cloud Hub" className="w-8 h-8 object-contain" />
-              <span className="font-heading font-bold text-sm text-foreground">AI Cloud Hub</span>
-            </div>
           <div className="flex items-center gap-3">
               {(() => {
                 const isGoogleUser = user?.app_metadata?.provider === "google" || user?.app_metadata?.providers?.includes("google");
                 const googleAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
                 if (isGoogleUser && googleAvatar) {
-                  return <img src={googleAvatar} alt="Profile" className="w-8 h-8 rounded-full object-cover" />;
+                  return <img src={googleAvatar} alt="Profile" className="w-9 h-9 rounded-full object-cover" />;
                 }
                 const initial = (user?.user_metadata?.display_name || user?.email || "U").charAt(0).toUpperCase();
                 return (
-                  <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                  <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
                     {initial}
                   </div>
                 );
               })()}
+              <span className="text-sm font-medium text-foreground">{maskedEmail}</span>
               <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[10px] px-1.5 py-0 font-bold">VIP {vipLevel}</Badge>
             </div>
             <button
