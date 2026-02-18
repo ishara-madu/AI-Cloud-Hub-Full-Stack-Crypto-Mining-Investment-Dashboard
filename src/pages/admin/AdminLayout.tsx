@@ -2,6 +2,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import AdminShell from "./AdminShell";
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
@@ -18,11 +19,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
-  return (
-    <div className="min-h-screen bg-background pb-4">
-      {children}
-    </div>
-  );
+  return <AdminShell>{children}</AdminShell>;
 };
 
 export default AdminLayout;
