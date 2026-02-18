@@ -248,11 +248,22 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  // Fetch real activity (marquee + live withdrawals)
+  // Fetch real activity (marquee + live withdrawals) + poll every 30s
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     fetchRealActivityData().then(fn => { cleanup = fn; });
-    return () => { if (cleanup) cleanup(); };
+
+    const interval = setInterval(() => {
+      fetchRealActivityData().then(fn => {
+        if (cleanup) cleanup();
+        cleanup = fn;
+      });
+    }, 30000);
+
+    return () => {
+      if (cleanup) cleanup();
+      clearInterval(interval);
+    };
   }, [fetchRealActivityData]);
 
   // Real-time subscriptions
