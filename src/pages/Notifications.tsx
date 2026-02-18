@@ -112,17 +112,24 @@ const Notifications = () => {
         ))}
       </div>
 
-      {/* Full View Modal — centered to visible viewport */}
+      {/* Full View Modal — centered to visible viewport using transform */}
       {selected && (
         <div
-          className="z-[100]"
-          style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 100 }}
           onClick={() => setSelected(null)}
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full max-w-sm shadow-neu rounded-2xl bg-card p-5 space-y-4 animate-fade-in"
-            style={{ zIndex: 1 }}
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 'calc(100% - 48px)',
+              maxWidth: '384px',
+              zIndex: 101,
+            }}
+            className="shadow-neu rounded-2xl bg-card p-5 space-y-4 animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
