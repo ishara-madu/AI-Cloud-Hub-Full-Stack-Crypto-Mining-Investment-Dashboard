@@ -620,32 +620,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══════ REFERRAL SECTION ═══════ */}
-        <div className="shadow-neu rounded-2xl bg-card p-4 space-y-3">
-          <h2 className="text-base font-heading font-bold text-foreground">🤝 Invite & Earn</h2>
-          <p className="text-xs text-muted-foreground">Share your referral link and earn commissions on every deposit your team makes.</p>
-          <div className="flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-2.5">
-            <span className="flex-1 text-xs text-foreground font-mono truncate">{referralLink}</span>
-            <button onClick={copyLink} className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-primary/5 rounded-xl p-2">
-              <p className="text-[10px] text-muted-foreground">Tier 1</p>
-              <p className="text-sm font-bold text-primary">5%</p>
-            </div>
-            <div className="bg-secondary/5 rounded-xl p-2">
-              <p className="text-[10px] text-muted-foreground">Tier 2</p>
-              <p className="text-sm font-bold text-secondary">3%</p>
-            </div>
-            <div className="bg-muted rounded-xl p-2">
-              <p className="text-[10px] text-muted-foreground">Tier 3</p>
-              <p className="text-sm font-bold text-foreground">1%</p>
-            </div>
-          </div>
-        </div>
-
         <div className="h-4" />
       </div>
     </div>
