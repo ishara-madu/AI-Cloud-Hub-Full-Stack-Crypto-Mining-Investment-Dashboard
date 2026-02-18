@@ -108,6 +108,7 @@ const Dashboard = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [dailyCheckedIn, setDailyCheckedIn] = useState(false);
+  const [todayPackageIncome, setTodayPackageIncome] = useState(0);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -120,6 +121,11 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
+      // First, try to auto-credit today's package income
+      const { data: incomeResult } = await supabase.rpc("claim_package_daily_income" as any);
+      const incomeAmount = (incomeResult as any)?.amount ?? 0;
+      const alreadyClaimed = (incomeResult as any)?.already_claimed ?? false;
+
       const [walletRes, pkgRes, profileRes, comRes, upRes, bannersRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("ai_packages").select("*").order("price_monthly", { ascending: true }),
@@ -133,8 +139,20 @@ const Dashboard = () => {
       setPackages(pkgs as AiPackage[]);
       setReferralCode(profileRes.data?.referral_code || "");
       setCommissionTotal((comRes.data || []).reduce((s: number, c: any) => s + Number(c.amount), 0));
-      setUserPackages((upRes.data || []) as UserPackage[]);
+      const activePkgs = (upRes.data || []) as UserPackage[];
+      setUserPackages(activePkgs);
       setBanners((bannersRes.data || []) as SliderBanner[]);
+
+      // Set today's package income (either freshly claimed or expected amount)
+      if (alreadyClaimed || incomeAmount === 0) {
+        // Already claimed: calculate expected from packages
+        const expected = activePkgs.reduce((s, up) => s + Math.round(up.price_paid * 0.05), 0);
+        setTodayPackageIncome(expected);
+      } else {
+        setTodayPackageIncome(incomeAmount);
+        if (incomeAmount > 0) toast.success(`+Rs ${incomeAmount.toLocaleString()} package income credited! 💰`);
+      }
+
       // Check daily sign-in status
       const todayStr = new Date().toISOString().split("T")[0];
       const { data: signinData } = await supabase
@@ -227,8 +245,7 @@ const Dashboard = () => {
     { id: "3", title: "Invite 5 Friends", subtitle: "Win Rs.5,000 Reward!", gradient: "from-orange-500 via-pink-500 to-purple-500", sort_order: 3, image_url: null },
   ];
 
-  // Calculate daily earnings from active packages
-  const todayDailyEarnings = userPackages.reduce((sum, up) => sum + Math.round(up.price_paid * 0.05), 0);
+  // todayPackageIncome is set from the DB after auto-credit
 
   return (
     <div className="animate-fade-in">
@@ -322,7 +339,7 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Daily Earnings", value: todayDailyEarnings },
+              { label: "Daily Earnings", value: todayPackageIncome },
               { label: "Commissions", value: commissionTotal },
               { label: "Bonus Credits", value: 0 },
             ].map((item) => (
