@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Clock, Image } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Image, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const statusColor: Record<string, string> = {
@@ -117,9 +117,21 @@ const AdminDeposits = () => {
                 {d.notes && <span className="ml-3">Note: {d.notes}</span>}
               </div>
               {d.slip_url && (
-                <button onClick={() => setViewSlip(d.slip_url)} className="flex items-center gap-1.5 text-xs text-primary font-medium mb-2 hover:underline">
-                  <Image className="w-3.5 h-3.5" /> View Payment Slip
-                </button>
+                <div className="flex items-center gap-3 mb-2">
+                  <button onClick={() => setViewSlip(d.slip_url)} className="flex items-center gap-1.5 text-xs text-primary font-medium hover:underline">
+                    <Image className="w-3.5 h-3.5" /> View Payment Slip
+                  </button>
+                  <a
+                    href={d.slip_url}
+                    download={`slip-${d.id}.jpg`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-secondary font-medium hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download
+                  </a>
+                </div>
               )}
               {d.status === "pending" && (
                 <div className="flex gap-2">

@@ -60,7 +60,10 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   }, [user, location.pathname]);
 
   const maskedEmail = user?.email
-    ? user.email.split("@")[0].slice(0, 3) + "***@" + user.email.split("@")[1]
+    ? (() => {
+        const [local, domain] = user.email.split("@");
+        return local.slice(0, 3) + "***@" + domain;
+      })()
     : "user@email.com";
 
   const isProfilePage = location.pathname === "/settings";
