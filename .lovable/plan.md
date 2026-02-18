@@ -1,86 +1,78 @@
 
+## Root Cause
 
-# AI Services Marketplace — User Panel (Phase 1)
+The notification detail popup in `Notifications.tsx` uses:
+```css
+position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%)
+```
 
-## Overview
-A premium fintech-style AI services marketplace with wallet system, package purchases, referral commissions, and team management. Built with Supabase for auth, database, and real-time functionality. Orange & teal color palette on white background.
+This **should** work for true viewport centering, but the issue is that `AppLayout.tsx` wraps all page content in:
+```tsx
+<main className="flex-1 pb-20 overflow-y-auto">
+```
 
----
+The page scroll happens **inside `<main>`**, not at the `window` level. When a `position: fixed` element is inside a scroll container that has `overflow-y: auto`, the fixed positioning works relative to the scroll container's visual bounds — meaning `top: 50%` can appear offset when the user has scrolled down.
 
-## 1. Design System & Theme
-- Custom color palette: orange primary accents, teal secondary accents, green/red for success/error states
-- Soft gradients, rounded cards with light shadows
-- Loading skeletons for all data-fetching states
-- Fully responsive layout with sidebar navigation (collapsible on mobile)
-- Consistent typography with professional spacing
+Additionally, the modal `<div>` in `Notifications.tsx` is rendered **inside** the scrollable `<div className="animate-fade-in">` wrapper, which is a child of `<main>`. This means the fixed overlay backdrop (`position: fixed; inset: 0`) covers the viewport correctly, but the modal card position gets affected by the scroll offset.
 
-## 2. Authentication
-- **Login** page with email/password
-- **Register** page with referral code field (optional, auto-filled from URL)
-- **Forgot password** flow with email reset
-- **Email verification** after signup
-- User profiles table with display name, phone, avatar
-- Protected routes — redirect unauthenticated users to login
+## Fix Strategy
 
-## 3. Dashboard
-- Welcome greeting with user's name
-- Stat cards showing: Wallet Balance, Total Deposits, Total Withdrawals, Total Commissions
-- Active AI packages summary
-- Recent activity feed (last 5 transactions)
-- Quick action buttons (Deposit, Browse Packages)
+Two changes needed:
 
-## 4. Wallet System
-- **Deposit page**: Amount input, payment method selection (Bank Transfer, Crypto, Credit Card), submit deposit request (pending admin approval)
-- **Withdraw page**: Amount input, select saved bank account, submit withdrawal request
-- Balance display with pending amounts shown separately
-- All deposit/withdrawal requests stored in database with status tracking (pending → approved/rejected)
+### 1. `src/pages/Notifications.tsx` — Move modal outside scroll flow using a portal-like approach
 
-## 5. AI Packages Mall
-- Grid of package cards showing: name, description, features list (queries, storage, GPU, etc.), price (one-time & monthly options), cashback/bonus badges
-- Package detail view
-- Buy package flow (deducts from wallet balance)
-- **My Packages** tab showing active subscriptions with expiry dates and renewal status
+Move the modal so it uses `position: fixed` with `50vh` (viewport height units) instead of `50%`. Using `50vh` always refers to half the real visible screen height, unaffected by any scroll container. Also switch the backdrop and modal to render at the very end of the component, **outside** any container divs that participate in the layout flow.
 
-## 6. Transactions
-- Tabbed view: All, Deposits, Withdrawals, Purchases, Commissions
-- Each row shows: date, type, amount, status badge (success/pending/failed), description
-- Filters by date range and status
-- Pagination for large lists
+**Change:**
+```tsx
+// Before
+style={{
+  position: 'fixed',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  ...
+}}
 
-## 7. Team / Referral System
-- Unique referral link with copy button
-- Tier-based team view (Tier 1 = direct referrals, Tier 2 = their referrals, Tier 3 = one more level)
-- Table per tier showing: Member ID, join date, total consumption, commission earned
-- Total team stats summary
+// After — use 50vh instead of 50%
+style={{
+  position: 'fixed',
+  top: '50vh',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  ...
+}}
+```
 
-## 8. Profile & Settings
-- Edit profile (name, phone, avatar)
-- Change password
-- Manage bank details (add/edit bank name, account number, IBAN)
-- Language selector (UI only for now)
-- About us, Contact support, Logout
-- Download app placeholder
+Also wrap the entire modal (backdrop + card) in a React Fragment and place it **after** the main scrollable content div, ensuring it sits at the root level of the component return, not nested inside the content container.
 
-## 9. Database Structure (Supabase)
-- `profiles` — user profile data
-- `bank_accounts` — user saved bank details
-- `wallets` — user balances
-- `deposit_requests` — deposit submissions with status
-- `withdrawal_requests` — withdrawal submissions with status
-- `ai_packages` — available packages (seeded with realistic data)
-- `user_packages` — purchased/active subscriptions
-- `transactions` — unified transaction log
-- `referrals` — referral relationships (who referred whom)
-- `commissions` — commission records per tier
-- `user_roles` — role-based access (user/admin)
-- Row-Level Security on all tables
+### 2. `src/components/AppLayout.tsx` — Ensure fixed elements target real viewport
 
-## 10. Seed Data
-- 5-6 realistic AI packages (e.g., "AI Starter", "Business Pro", "Enterprise GPU", etc.)
-- Realistic pricing, features, and cashback percentages
-- Sample transactions and activity for logged-in user
+The `<main>` tag currently has `overflow-y-auto`. This creates a new scroll context. To ensure `position: fixed` children always anchor to the true viewport, the scroll should remain at the `window` level rather than inside a container.
 
----
+Change `<main>` from `overflow-y-auto` to let the body/window scroll naturally. This means removing `overflow-y-auto` from `<main>` and ensuring the outer wrapper doesn't clip.
 
-> **Phase 2 (later):** Admin panel with user management, withdrawal approvals, package CRUD, commission configuration, and content management.
+**Change:**
+```tsx
+// Before
+<main className="flex-1 pb-20 overflow-y-auto">
 
+// After
+<main className="flex-1 pb-20">
+```
+
+This ensures that all `position: fixed` elements (modal overlays, bottom nav, headers) anchor correctly to the visible screen — not to a scroll container.
+
+## Files to Edit
+
+| File | Change |
+|------|--------|
+| `src/pages/Notifications.tsx` | Use `top: 50vh` in modal style + restructure modal to be outside content div |
+| `src/components/AppLayout.tsx` | Remove `overflow-y-auto` from `<main>` |
+
+## Impact Assessment
+
+- Removing `overflow-y-auto` from `<main>` makes the page scroll at the window level — this is the standard web behavior and will not break any other pages. All other sticky/fixed elements (top header, bottom nav) already use `position: sticky` and `position: fixed` which work correctly with window-level scrolling.
+- Using `50vh` for the modal top position guarantees it's always centered on the visible screen regardless of how far the user has scrolled.
+- No database changes needed.
+- Admin section is unaffected.
