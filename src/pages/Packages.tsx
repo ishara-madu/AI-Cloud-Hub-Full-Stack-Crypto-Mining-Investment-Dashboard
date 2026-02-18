@@ -30,6 +30,7 @@ interface UserPackage {
   is_active: boolean;
   price_paid: number;
   ai_packages: { name: string; description: string | null } | null;
+  actualEarned?: number;
 }
 
 const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
@@ -52,7 +53,35 @@ const Packages = () => {
       ]);
       const pkgs = (pkgRes.data || []).map((p: any) => ({ ...p, features: Array.isArray(p.features) ? p.features : [] }));
       setPackages(pkgs as AiPackage[]);
-      setUserPackages((upRes.data || []) as UserPackage[]);
+
+      const rawUserPkgs = (upRes.data || []) as UserPackage[];
+
+      // Fetch actual earned amounts from transactions for each user package
+      if (user && rawUserPkgs.length > 0) {
+        const { data: earnedTxns } = await supabase
+          .from("transactions")
+          .select("amount, description, created_at")
+          .eq("user_id", user.id)
+          .eq("type", "commission")
+          .eq("status", "approved")
+          .ilike("description", "Daily package income%");
+
+        // Sum all daily package income transactions as total earned
+        const totalEarned = (earnedTxns || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+
+        // Distribute total earned proportionally among packages by their price_paid
+        const totalInvested = rawUserPkgs.reduce((s, up) => s + Number(up.price_paid), 0);
+        const withEarned = rawUserPkgs.map((up) => ({
+          ...up,
+          actualEarned: totalInvested > 0
+            ? Math.round((Number(up.price_paid) / totalInvested) * totalEarned)
+            : 0,
+        }));
+        setUserPackages(withEarned as UserPackage[]);
+      } else {
+        setUserPackages(rawUserPkgs);
+      }
+
       setLoading(false);
     };
     fetchData();
@@ -75,8 +104,13 @@ const Packages = () => {
     const result = data as any;
     if (!result?.success) { toast.error(result?.error || "Purchase failed"); setBuying(null); return; }
     toast.success(`Successfully purchased ${pkg.name}!`);
+    // Refresh user packages with actual earned amounts
     const upRes = await supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).order("purchased_at", { ascending: false });
-    setUserPackages((upRes.data || []) as UserPackage[]);
+    const rawUserPkgs = (upRes.data || []) as UserPackage[];
+    const { data: earnedTxns } = await supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%");
+    const totalEarned = (earnedTxns || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const totalInvested = rawUserPkgs.reduce((s, up) => s + Number(up.price_paid), 0);
+    setUserPackages(rawUserPkgs.map((up) => ({ ...up, actualEarned: totalInvested > 0 ? Math.round((Number(up.price_paid) / totalInvested) * totalEarned) : 0 })));
     setBuying(null);
   };
 
@@ -197,7 +231,7 @@ const Packages = () => {
                 const daysRemaining = Math.max(totalDays - daysElapsed, 0);
                 const progressPct = Math.round((daysElapsed / totalDays) * 100);
                 const totalRevenue = dailyIncome * totalDays;
-                const earned = dailyIncome * daysElapsed;
+                
 
                 return (
                   <div key={up.id} className="shadow-neu rounded-2xl bg-card overflow-hidden">
@@ -235,7 +269,7 @@ const Packages = () => {
                       </div>
                       <div>
                         <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                          <span>Earned: Rs.{earned.toLocaleString()}</span>
+                          <span>Earned: Rs.{(up.actualEarned ?? 0).toLocaleString()}</span>
                           <span>{daysRemaining}d remaining</span>
                         </div>
                         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">

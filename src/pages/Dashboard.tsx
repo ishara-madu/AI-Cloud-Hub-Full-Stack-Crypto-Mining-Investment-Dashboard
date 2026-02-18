@@ -109,6 +109,7 @@ const Dashboard = () => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [dailyCheckedIn, setDailyCheckedIn] = useState(false);
   const [todayPackageIncome, setTodayPackageIncome] = useState(0);
+  const [totalPackageEarned, setTotalPackageEarned] = useState(0);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -126,13 +127,20 @@ const Dashboard = () => {
       const incomeAmount = (incomeResult as any)?.amount ?? 0;
       const alreadyClaimed = (incomeResult as any)?.already_claimed ?? false;
 
-      const [walletRes, pkgRes, profileRes, comRes, upRes, bannersRes] = await Promise.all([
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const [walletRes, pkgRes, profileRes, comRes, upRes, bannersRes, todayIncomeRes, totalIncomeRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("ai_packages").select("*").order("price_monthly", { ascending: true }),
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
         supabase.from("commissions").select("amount").eq("user_id", user.id),
         supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).eq("is_active", true).order("purchased_at", { ascending: false }),
         supabase.from("slider_banners").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+        // Today's credited package income
+        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStart.toISOString()),
+        // Total ever credited package income
+        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%"),
       ]);
       setWallet(walletRes.data as WalletData | null);
       const pkgs = (pkgRes.data || []).map((p: any) => ({ ...p, features: Array.isArray(p.features) ? p.features : [] }));
@@ -143,14 +151,15 @@ const Dashboard = () => {
       setUserPackages(activePkgs);
       setBanners((bannersRes.data || []) as SliderBanner[]);
 
-      // Set today's package income (either freshly claimed or expected amount)
-      if (alreadyClaimed || incomeAmount === 0) {
-        // Already claimed: calculate expected from packages
-        const expected = activePkgs.reduce((s, up) => s + Math.round(up.price_paid * 0.05), 0);
-        setTodayPackageIncome(expected);
-      } else {
-        setTodayPackageIncome(incomeAmount);
-        if (incomeAmount > 0) toast.success(`+Rs ${incomeAmount.toLocaleString()} package income credited! 💰`);
+      // Today's actual credited package income from DB
+      const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+      // Total ever credited package income from DB
+      const totalIncome = (totalIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+      setTodayPackageIncome(todayIncome);
+      setTotalPackageEarned(totalIncome);
+
+      if (incomeAmount > 0 && !alreadyClaimed) {
+        toast.success(`+Rs ${incomeAmount.toLocaleString()} package income credited! 💰`);
       }
 
       // Check daily sign-in status
@@ -339,9 +348,9 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Daily Earnings", value: todayPackageIncome },
+              { label: "Today Earned", value: todayPackageIncome },
               { label: "Commissions", value: commissionTotal },
-              { label: "Bonus Credits", value: 0 },
+              { label: "Total Earned", value: totalPackageEarned },
             ].map((item) => (
               <div key={item.label} className="shadow-neu rounded-xl bg-card p-3 text-center">
                 <p className="text-xs text-muted-foreground leading-tight">{item.label}</p>
