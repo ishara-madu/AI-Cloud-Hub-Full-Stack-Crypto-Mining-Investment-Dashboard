@@ -118,13 +118,24 @@ const Dashboard = () => {
     return () => { carouselApi.off("select", onSelect); };
   }, [carouselApi]);
 
+  // Refresh today's transaction stats from DB
+  const refreshTodayStats = useCallback(async () => {
+    if (!user) return;
+    const todayStartUtc = new Date();
+    todayStartUtc.setUTCHours(0, 0, 0, 0);
+    const [todayIncomeRes, todayAllCommRes] = await Promise.all([
+      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStartUtc.toISOString()),
+      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStartUtc.toISOString()),
+    ]);
+    const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const todayAllComm = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+    setTodayPackageIncome(todayIncome);
+    setCommissionTotal(todayAllComm);
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      // Income is now auto-credited at 00:00 UTC daily by server-side cron.
-      // On purchase, first-day income is credited immediately.
-      // Dashboard just reads actual data from the DB.
-
       // UTC midnight — used to filter "today's" transactions
       const todayStartUtc = new Date();
       todayStartUtc.setUTCHours(0, 0, 0, 0);
@@ -135,11 +146,8 @@ const Dashboard = () => {
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
         supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).eq("is_active", true).order("purchased_at", { ascending: false }),
         supabase.from("slider_banners").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
-        // Today's package income transactions (UTC-aligned)
         supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStartUtc.toISOString()),
-        // Today's ALL commissions (package income + referral commissions)
         supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStartUtc.toISOString()),
-        // Today's sign-in check
         supabase.from("daily_signins").select("id").eq("user_id", user.id).eq("signed_in_date", new Date().toISOString().split("T")[0]).maybeSingle(),
       ]);
 
@@ -150,18 +158,42 @@ const Dashboard = () => {
       setUserPackages((upRes.data || []) as UserPackage[]);
       setBanners((bannersRes.data || []) as SliderBanner[]);
 
-      // Today's package income (from actual DB transactions)
       const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
-      // Today's total commissions (package + referral)
       const todayAllComm = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
       setTodayPackageIncome(todayIncome);
       setCommissionTotal(todayAllComm);
-
       setDailyCheckedIn(!!signinRes.data);
       setLoading(false);
     };
     fetchData();
   }, [user]);
+
+  // Real-time wallet subscription — instantly reflects any balance change
+  // (referral commissions, sign-in rewards, package purchase income, midnight cron, etc.)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`wallet-realtime-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          // Instantly update balance when wallet changes (any income source)
+          setWallet(payload.new as WalletData);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "transactions", filter: `user_id=eq.${user.id}` },
+        () => {
+          // Re-fetch today's commission stats whenever a new transaction arrives
+          refreshTodayStats();
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, refreshTodayStats]);
 
   // Marquee rotation with realistic low-traffic delays (15-45 seconds)
   useEffect(() => {
