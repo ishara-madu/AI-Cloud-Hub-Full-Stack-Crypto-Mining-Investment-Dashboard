@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,6 +51,8 @@ const AdminPage = ({ children }: { children: React.ReactNode }) => (
   <AdminLayout>{children}</AdminLayout>
 );
 
+const isNative = Capacitor.isNativePlatform();
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -79,18 +82,20 @@ const App = () => (
             <Route path="/bank-info" element={<ProtectedPage><BankInfo /></ProtectedPage>} />
             <Route path="/commission-details" element={<ProtectedPage><CommissionDetails /></ProtectedPage>} />
             <Route path="/earned-history" element={<ProtectedPage><EarnedHistory /></ProtectedPage>} />
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
-            <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
-            <Route path="/admin/deposits" element={<AdminPage><AdminDeposits /></AdminPage>} />
-            <Route path="/admin/withdrawals" element={<AdminPage><AdminWithdrawals /></AdminPage>} />
-            <Route path="/admin/packages" element={<AdminPage><AdminPackages /></AdminPage>} />
-            <Route path="/admin/redeem-codes" element={<AdminPage><AdminRedeemCodes /></AdminPage>} />
-            <Route path="/admin/sliders" element={<AdminPage><AdminSliders /></AdminPage>} />
-            <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
-            <Route path="/admin/user-packages" element={<AdminPage><AdminUserPackages /></AdminPage>} />
-            <Route path="/admin/alerts" element={<AdminPage><AdminAlerts /></AdminPage>} />
-            <Route path="/admin/users/:userId" element={<AdminPage><AdminUserDetail /></AdminPage>} />
+            {/* Admin Routes — hidden on native Android/iOS */}
+            {!isNative && <>
+              <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
+              <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
+              <Route path="/admin/deposits" element={<AdminPage><AdminDeposits /></AdminPage>} />
+              <Route path="/admin/withdrawals" element={<AdminPage><AdminWithdrawals /></AdminPage>} />
+              <Route path="/admin/packages" element={<AdminPage><AdminPackages /></AdminPage>} />
+              <Route path="/admin/redeem-codes" element={<AdminPage><AdminRedeemCodes /></AdminPage>} />
+              <Route path="/admin/sliders" element={<AdminPage><AdminSliders /></AdminPage>} />
+              <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
+              <Route path="/admin/user-packages" element={<AdminPage><AdminUserPackages /></AdminPage>} />
+              <Route path="/admin/alerts" element={<AdminPage><AdminAlerts /></AdminPage>} />
+              <Route path="/admin/users/:userId" element={<AdminPage><AdminUserDetail /></AdminPage>} />
+            </>}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
