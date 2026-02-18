@@ -150,7 +150,6 @@ const Dashboard = () => {
     const deposits = depositsRes.data || [];
     const commissions = commissionsRes.data || [];
 
-    // Collect all user IDs and fetch their display names
     const allUserIds = [...new Set([
       ...withdrawals.map((w: any) => w.user_id),
       ...deposits.map((d: any) => d.user_id),
@@ -166,7 +165,6 @@ const Dashboard = () => {
       });
     }
 
-    // Build combined activity list
     type ActivityItem = { user: string; amount: number; type: string; created_at: string };
     const allActivity: ActivityItem[] = [];
 
@@ -182,13 +180,12 @@ const Dashboard = () => {
 
     allActivity.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    // Live Withdrawals feed (withdrawals only) — no animation on initial load
+    // Live Withdrawals feed — no animation on initial load
     const withdrawalPayouts = allActivity.filter(a => a.type === "withdrawal").slice(0, 15).map((a, i) => ({ ...a, key: i, isNew: false }));
     if (withdrawalPayouts.length > 0) {
       setLivePayouts(withdrawalPayouts);
     }
 
-    // Build marquee messages from all real activity
     const buildMsg = (item: ActivityItem) => {
       if (item.type === "withdrawal") return `${item.user} withdrew Rs.${item.amount.toLocaleString()} successfully ✅`;
       if (item.type === "deposit") return `${item.user} deposited Rs.${item.amount.toLocaleString()} via bank transfer`;
@@ -196,17 +193,16 @@ const Dashboard = () => {
     };
 
     if (allActivity.length > 0) {
-      // Start with a random item
       const startIdx = Math.floor(Math.random() * allActivity.length);
       setMarqueeMsg(buildMsg(allActivity[startIdx]));
       setMarqueeKey(k => k + 1);
 
-      // Rotate through real items — each unique message shown once before repeating
+      // Rotate messages, repeating the last alert when only 1 item
       let idx = startIdx;
       const schedule = (): ReturnType<typeof setTimeout> => {
-        const delay = 12000 + Math.random() * 18000;
+        const delay = 12000 + Math.random() * 6000;
         return setTimeout(() => {
-          idx = (idx + 1) % allActivity.length;
+          idx = allActivity.length > 1 ? (idx + 1) % allActivity.length : idx;
           setMarqueeMsg(buildMsg(allActivity[idx]));
           setMarqueeKey(k => k + 1);
           timerRef = schedule();
@@ -275,16 +271,24 @@ const Dashboard = () => {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "transactions" },
         async (payload) => {
           const tx = payload.new as any;
+          // Only handle approved transactions for social proof
+          if (tx.status !== "approved") return;
+          const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", tx.user_id).maybeSingle();
+          const name = ((profile?.display_name || "user") as string).toLowerCase().replace(/\s+/g, "");
+          const masked = name.slice(0, 3) + "***@gmail.com";
+
           if (tx.type === "withdrawal") {
-            const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", tx.user_id).maybeSingle();
-            const name = ((profile?.display_name || "user") as string).toLowerCase().replace(/\s+/g, "");
-            const masked = name.slice(0, 3) + "***@gmail.com";
             const newItem: LivePayout = { user: masked, amount: Number(tx.amount), key: keyCounter++, type: "withdrawal", isNew: true };
-            // Prepend with slide-down animation (new item appears at top)
             setLivePayouts(prev => [newItem, ...prev.slice(0, 14).map(p => ({ ...p, isNew: false }))]);
             setMarqueeMsg(`${masked} withdrew Rs.${Number(tx.amount).toLocaleString()} successfully ✅`);
-            setMarqueeKey(k => k + 1);
+          } else if (tx.type === "deposit") {
+            setMarqueeMsg(`${masked} deposited Rs.${Number(tx.amount).toLocaleString()} via bank transfer`);
+          } else if (tx.type === "commission") {
+            setMarqueeMsg(`${masked} earned Rs.${Number(tx.amount).toLocaleString()} commission 🎉`);
+          } else {
+            return;
           }
+          setMarqueeKey(k => k + 1);
         }
       )
       .subscribe();
