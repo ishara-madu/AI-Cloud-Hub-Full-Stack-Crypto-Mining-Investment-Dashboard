@@ -473,7 +473,7 @@ export type Database = {
           is_active?: boolean
           sort_order?: number
           subtitle?: string | null
-          title: string
+          title?: string
         }
         Update: {
           created_at?: string

@@ -63,7 +63,7 @@ const AdminSliders = () => {
     if (imageFile && !imageUrl) { setSaving(false); return; }
 
     const { error } = await supabase.from("slider_banners").insert({
-      title: form.title.trim() || "Banner",
+      title: form.title.trim() || "",
       subtitle: form.subtitle.trim() || null,
       gradient: form.gradient,
       sort_order: parseInt(form.sort_order) || 0,
@@ -97,7 +97,7 @@ const AdminSliders = () => {
     }
 
     const updateData: any = {
-      title: form.title.trim() || "Banner",
+      title: form.title.trim() || "",
       subtitle: form.subtitle.trim() || null,
       gradient: form.gradient,
       sort_order: parseInt(form.sort_order) || 0,
@@ -202,20 +202,24 @@ const AdminSliders = () => {
               <>
                 {b.image_url ? (
                   <div className="h-20 relative">
-                    <img src={b.image_url} alt={b.title} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center p-3">
-                      <div className="text-white text-center">
-                        <p className="text-sm font-bold">{b.title}</p>
-                        {b.subtitle && <p className="text-[10px] opacity-80">{b.subtitle}</p>}
+                    <img src={b.image_url} alt={b.title || "Banner"} className="w-full h-full object-cover" />
+                    {(b.title || b.subtitle) && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center p-3">
+                        <div className="text-white text-center">
+                          {b.title && <p className="text-sm font-bold">{b.title}</p>}
+                          {b.subtitle && <p className="text-[10px] opacity-80">{b.subtitle}</p>}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ) : (
                   <div className={`h-16 bg-gradient-to-r ${b.gradient} flex items-center justify-center p-3`}>
-                    <div className="text-white text-center">
-                      <p className="text-sm font-bold">{b.title}</p>
-                      {b.subtitle && <p className="text-[10px] opacity-80">{b.subtitle}</p>}
-                    </div>
+                    {(b.title || b.subtitle) && (
+                      <div className="text-white text-center">
+                        {b.title && <p className="text-sm font-bold">{b.title}</p>}
+                        {b.subtitle && <p className="text-[10px] opacity-80">{b.subtitle}</p>}
+                      </div>
+                    )}
                   </div>
                 )}
                 <CardContent className="p-3 flex items-center justify-between">

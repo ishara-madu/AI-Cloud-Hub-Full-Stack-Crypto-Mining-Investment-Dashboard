@@ -1,0 +1,1 @@
+ALTER TABLE public.slider_banners ALTER COLUMN title SET DEFAULT '';
