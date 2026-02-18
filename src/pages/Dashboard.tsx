@@ -358,11 +358,13 @@ const Dashboard = () => {
                   {slide.image_url && (
                     <img src={slide.image_url} alt={slide.title} className="absolute inset-0 w-full h-full object-cover" />
                   )}
-                  <div className="absolute inset-0 bg-black/30" />
-                  <div className="relative z-10">
-                    <p className="text-lg font-heading font-bold leading-tight">{slide.title}</p>
-                    <p className="text-sm opacity-90 mt-0.5">{slide.subtitle}</p>
-                  </div>
+                  {(slide.title || slide.subtitle) && <div className="absolute inset-0 bg-black/30" />}
+                  {(slide.title || slide.subtitle) && (
+                    <div className="relative z-10">
+                      {slide.title && <p className="text-lg font-heading font-bold leading-tight">{slide.title}</p>}
+                      {slide.subtitle && <p className="text-sm opacity-90 mt-0.5">{slide.subtitle}</p>}
+                    </div>
+                  )}
                   {!slide.image_url && <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10" />}
                   {!slide.image_url && <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/10" />}
                 </div>
