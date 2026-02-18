@@ -121,56 +121,43 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-    // First, try to auto-credit today's package income
-      const { data: incomeResult } = await supabase.rpc("claim_package_daily_income" as any);
-      const incomeAmount = (incomeResult as any)?.amount ?? 0;
-      const alreadyClaimed = (incomeResult as any)?.already_claimed ?? false;
+      // Income is now auto-credited at 00:00 UTC daily by server-side cron.
+      // On purchase, first-day income is credited immediately.
+      // Dashboard just reads actual data from the DB.
 
-      // Use UTC midnight to match the database's CURRENT_DATE (which is UTC-based)
+      // UTC midnight — used to filter "today's" transactions
       const todayStartUtc = new Date();
       todayStartUtc.setUTCHours(0, 0, 0, 0);
 
-      const [walletRes, pkgRes, profileRes, upRes, bannersRes, todayIncomeRes, todayAllCommRes] = await Promise.all([
+      const [walletRes, pkgRes, profileRes, upRes, bannersRes, todayIncomeRes, todayAllCommRes, signinRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("ai_packages").select("*").order("price_monthly", { ascending: true }),
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
         supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).eq("is_active", true).order("purchased_at", { ascending: false }),
         supabase.from("slider_banners").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
-        // Today's credited package income (UTC-aligned)
+        // Today's package income transactions (UTC-aligned)
         supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStartUtc.toISOString()),
-        // Today's ALL commission (package income + referral) for "Today Earned" display
+        // Today's ALL commissions (package income + referral commissions)
         supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStartUtc.toISOString()),
+        // Today's sign-in check
+        supabase.from("daily_signins").select("id").eq("user_id", user.id).eq("signed_in_date", new Date().toISOString().split("T")[0]).maybeSingle(),
       ]);
 
       setWallet(walletRes.data as WalletData | null);
       const pkgs = (pkgRes.data || []).map((p: any) => ({ ...p, features: Array.isArray(p.features) ? p.features : [] }));
       setPackages(pkgs as AiPackage[]);
       setReferralCode(profileRes.data?.referral_code || "");
-      const activePkgs = (upRes.data || []) as UserPackage[];
-      setUserPackages(activePkgs);
+      setUserPackages((upRes.data || []) as UserPackage[]);
       setBanners((bannersRes.data || []) as SliderBanner[]);
 
-      // Today's package income from DB (UTC-aligned)
+      // Today's package income (from actual DB transactions)
       const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
       // Today's total commissions (package + referral)
       const todayAllComm = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
       setTodayPackageIncome(todayIncome);
-      // commissionTotal = today's full earned (package income + referral commissions)
       setCommissionTotal(todayAllComm);
 
-      if (incomeAmount > 0 && !alreadyClaimed) {
-        toast.success(`+Rs ${incomeAmount.toLocaleString()} package income credited! 💰`);
-      }
-
-      // Check daily sign-in status
-      const todayStr = new Date().toISOString().split("T")[0];
-      const { data: signinData } = await supabase
-        .from("daily_signins")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("signed_in_date", todayStr)
-        .maybeSingle();
-      setDailyCheckedIn(!!signinData);
+      setDailyCheckedIn(!!signinRes.data);
       setLoading(false);
     };
     fetchData();
