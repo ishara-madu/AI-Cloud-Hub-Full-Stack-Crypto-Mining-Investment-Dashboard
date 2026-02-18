@@ -586,8 +586,8 @@ const Dashboard = () => {
                 No recent withdrawals
               </div>
             ) : (
-              <div className="divide-y divide-border/50">
-                {livePayouts.slice(0, 8).map((p) => (
+              <div className="overflow-y-auto divide-y divide-border/50" style={{ maxHeight: '210px' }}>
+                {livePayouts.slice(0, 10).map((p) => (
                   <div
                     key={p.key}
                     className={`flex items-center justify-between px-4 h-[42px] ${p.isNew ? 'animate-slide-down' : ''}`}
