@@ -38,6 +38,7 @@ import AdminUserPackages from "./pages/admin/AdminUserPackages";
 import AdminAlerts from "./pages/admin/AdminAlerts";
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />

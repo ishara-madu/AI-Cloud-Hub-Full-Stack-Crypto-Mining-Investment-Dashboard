@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, User, Wallet, ShieldAlert, ShieldCheck, Copy, CreditCard,
-  Crown, AlertTriangle, Bell, Package, TrendingUp, TrendingDown, Activity,
-  Smartphone, Clock, Star, Ban, CheckCircle, XCircle, Calendar,
+  Crown, AlertTriangle, Bell, Package, TrendingUp, Activity,
+  Smartphone, Clock, Ban, CheckCircle, XCircle, Calendar,
   DollarSign, ArrowUpRight, ArrowDownRight, BarChart3, Info, RefreshCw,
-  Users, Hash, Phone, Link2
+  Users, Hash, Phone, Link2, Timer
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,9 +30,10 @@ interface UserDetail {
   ban_count: number;
   avatar_url: string | null;
   privacy_accepted: boolean;
+  ban_expires_at: string | null;
 }
 
-interface Wallet {
+interface WalletData {
   balance: number;
   total_deposited: number;
   total_withdrawn: number;
@@ -104,11 +106,25 @@ interface Referral {
   referred_name?: string;
 }
 
+// Helper: format remaining time from now until expiryIso
+const formatTimeRemaining = (expiryIso: string): string => {
+  const ms = new Date(expiryIso).getTime() - Date.now();
+  if (ms <= 0) return "Expired";
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  if (h > 24) {
+    const d = Math.floor(h / 24);
+    return `${d}d ${h % 24}h remaining`;
+  }
+  return `${h}h ${m}m ${s}s remaining`;
+};
+
 const AdminUserDetail = () => {
   const { userId } = useParams<{ userId: string }>();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserDetail | null>(null);
-  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [wallet, setWallet] = useState<WalletData | null>(null);
   const [role, setRole] = useState<string>("user");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -118,6 +134,15 @@ const AdminUserDetail = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referrerName, setReferrerName] = useState<string | null>(null);
+  const [banDuration, setBanDuration] = useState<string>("");
+  const [banning, setBanning] = useState(false);
+  const [ticker, setTicker] = useState(0);
+
+  // Tick every second for live countdown
+  useEffect(() => {
+    const interval = setInterval(() => setTicker(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchAll = async () => {
     if (!userId) return;
@@ -149,7 +174,6 @@ const AdminUserDetail = () => {
     setBankAccounts(bankRes.data || []);
     setCommissions(commRes.data || []);
 
-    // Fetch referred user names
     const refs = refRes.data || [];
     if (refs.length > 0) {
       const refIds = refs.map((r: any) => r.referred_id);
@@ -160,7 +184,6 @@ const AdminUserDetail = () => {
       setReferrals([]);
     }
 
-    // Fetch referrer name if referred_by exists
     if (profileRes.data?.referred_by) {
       const { data: refData } = await supabase.from("profiles").select("display_name").eq("user_id", profileRes.data.referred_by).single();
       setReferrerName(refData?.display_name || null);
@@ -192,7 +215,41 @@ const AdminUserDetail = () => {
     return issues;
   };
 
+  const handleBan = async () => {
+    if (!userId || !profile) return;
+    setBanning(true);
+    const hours = banDuration ? parseInt(banDuration) : null;
+    const { data, error } = await supabase.rpc("ban_user", {
+      p_user_id: userId,
+      p_duration_hours: hours,
+    } as any);
+    if (error || !(data as any)?.success) {
+      toast.error((data as any)?.error || error?.message || "Ban failed");
+    } else {
+      const d = data as any;
+      toast.success(
+        `${profile.display_name || "User"} banned. Credit: ${d.new_credit_score}%${d.is_temporary ? ` (temp ${hours}h)` : " (permanent)"}`
+      );
+    }
+    setBanning(false);
+    fetchAll();
+  };
+
+  const handleUnban = async () => {
+    if (!userId) return;
+    await supabase.from("profiles").update({ is_frozen: false, ban_expires_at: null }).eq("user_id", userId);
+    await supabase.from("notifications").insert({
+      user_id: userId, type: "security",
+      title: "Account Unfrozen ✅",
+      description: "Your account has been unfrozen by an administrator. You can now use all features normally.",
+    });
+    toast.success("Account unfrozen");
+    fetchAll();
+  };
+
   const isBanActive = profile?.is_frozen;
+  const isTempBan = profile?.is_frozen && !!profile?.ban_expires_at;
+  const isPermanentBan = profile?.is_frozen && !profile?.ban_expires_at;
   const creditIssues = profile ? getCreditScoreIssues(profile.credit_score, profile.ban_count) : [];
 
   const todayEarnings = transactions
@@ -256,7 +313,9 @@ const AdminUserDetail = () => {
               <h1 className="text-xl font-heading font-bold text-foreground">{profile.display_name || "No Name"}</h1>
               {role === "admin" && <Badge className="bg-red-500/20 text-red-500 text-[10px]"><Crown className="w-3 h-3 mr-1" />Admin</Badge>}
               {isBanActive ? (
-                <Badge className="bg-destructive/20 text-destructive text-[10px]"><Ban className="w-3 h-3 mr-1" />Frozen</Badge>
+                isTempBan
+                  ? <Badge className="bg-yellow-500/20 text-yellow-600 text-[10px]"><Timer className="w-3 h-3 mr-1" />Temp Ban</Badge>
+                  : <Badge className="bg-destructive/20 text-destructive text-[10px]"><Ban className="w-3 h-3 mr-1" />Permanent Ban</Badge>
               ) : (
                 <Badge className="bg-emerald-500/20 text-emerald-600 text-[10px]"><CheckCircle className="w-3 h-3 mr-1" />Active</Badge>
               )}
@@ -285,7 +344,7 @@ const AdminUserDetail = () => {
         </Card>
         <Card className="shadow-neu">
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Ban Count</p>
+            <p className="text-xs text-muted-foreground mb-1">Total Bans</p>
             <p className={`text-lg font-bold ${profile.ban_count > 0 ? "text-destructive" : "text-emerald-500"}`}>{profile.ban_count}</p>
           </CardContent>
         </Card>
@@ -305,10 +364,20 @@ const AdminUserDetail = () => {
               <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
               <p className="text-sm font-bold text-destructive">Active Issues & Penalties</p>
             </div>
-            {isBanActive && (
+            {isBanActive && isTempBan && profile.ban_expires_at && (
+              <div className="flex items-center gap-2 text-xs bg-yellow-500/10 rounded-lg px-3 py-2 border border-yellow-500/30">
+                <Timer className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+                <div>
+                  <span className="text-yellow-600 font-bold">TEMPORARY BAN — </span>
+                  <span className="text-yellow-600 font-mono font-bold">{formatTimeRemaining(profile.ban_expires_at)}</span>
+                  <span className="text-muted-foreground ml-2">(expires {new Date(profile.ban_expires_at).toLocaleString()})</span>
+                </div>
+              </div>
+            )}
+            {isBanActive && isPermanentBan && (
               <div className="flex items-center gap-2 text-xs bg-destructive/10 rounded-lg px-3 py-2">
                 <Ban className="w-3.5 h-3.5 text-destructive shrink-0" />
-                <span className="text-destructive font-medium">Account is currently FROZEN — all withdrawals and features disabled</span>
+                <span className="text-destructive font-medium">PERMANENT BAN — Account fully frozen. All withdrawals and features disabled.</span>
               </div>
             )}
             {creditIssues.map((issue, i) => (
@@ -326,6 +395,72 @@ const AdminUserDetail = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Ban/Unban Controls */}
+      <Card className="shadow-neu">
+        <CardContent className="p-4 space-y-3">
+          <p className="text-sm font-bold text-foreground flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-destructive" />Ban Controls
+            <Badge className="ml-auto text-[10px]">Total bans: {profile.ban_count}</Badge>
+          </p>
+          {isBanActive ? (
+            <div className="space-y-2">
+              {isTempBan && profile.ban_expires_at && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-center">
+                  <p className="text-yellow-600 font-bold">⏱ Temporary ban expires in:</p>
+                  <p className="text-yellow-500 font-mono text-base font-bold mt-1">{formatTimeRemaining(profile.ban_expires_at)}</p>
+                  <p className="text-muted-foreground text-[10px] mt-0.5">{new Date(profile.ban_expires_at).toLocaleString()}</p>
+                </div>
+              )}
+              {isPermanentBan && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2 text-xs text-center">
+                  <p className="text-destructive font-bold">🔒 Permanent Ban — Account fully frozen</p>
+                </div>
+              )}
+              <Button onClick={handleUnban} className="w-full rounded-xl" variant="default">
+                <ShieldCheck className="w-4 h-4 mr-2" />Unfreeze Account
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs">Duration (hours) — leave empty for permanent</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 24 (permanent if empty)"
+                    className="rounded-xl h-9 text-sm"
+                    value={banDuration}
+                    onChange={e => setBanDuration(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {["1", "6", "24", "72", "168"].map(h => (
+                  <button
+                    key={h}
+                    onClick={() => setBanDuration(h)}
+                    className={`text-[10px] px-2 py-1 rounded-lg border transition-colors ${banDuration === h ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary"}`}
+                  >
+                    {h}h
+                  </button>
+                ))}
+                <button
+                  onClick={() => setBanDuration("")}
+                  className={`text-[10px] px-2 py-1 rounded-lg border transition-colors ${!banDuration ? "bg-destructive text-destructive-foreground border-destructive" : "border-border text-muted-foreground hover:border-destructive"}`}
+                >
+                  Permanent
+                </button>
+              </div>
+              <Button onClick={handleBan} variant="destructive" className="w-full rounded-xl" disabled={banning}>
+                <Ban className="w-4 h-4 mr-2" />
+                {banDuration ? `Temp Ban (${banDuration}h)` : "Permanent Ban"} — Ban #{profile.ban_count + 1}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
@@ -383,11 +518,19 @@ const AdminUserDetail = () => {
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Account Status</span>
                     {isBanActive ? (
-                      <Badge className="bg-destructive/20 text-destructive text-[10px]">🔒 Frozen</Badge>
+                      isTempBan
+                        ? <Badge className="bg-yellow-500/20 text-yellow-600 text-[10px]">⏱ Temp Ban</Badge>
+                        : <Badge className="bg-destructive/20 text-destructive text-[10px]">🔒 Permanent Ban</Badge>
                     ) : (
                       <Badge className="bg-emerald-500/20 text-emerald-600 text-[10px]">✅ Active</Badge>
                     )}
                   </div>
+                  {isTempBan && profile.ban_expires_at && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Time Remaining</span>
+                      <span className="font-mono font-bold text-yellow-600">{formatTimeRemaining(profile.ban_expires_at)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Total Bans</span>
                     <span className={`font-bold ${profile.ban_count > 0 ? "text-destructive" : "text-emerald-500"}`}>{profile.ban_count}</span>
@@ -503,7 +646,6 @@ const AdminUserDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Withdrawal eligibility */}
           <Card className="shadow-neu">
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-primary" />Withdrawal Eligibility</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -521,7 +663,7 @@ const AdminUserDetail = () => {
                 {
                   label: "Account not frozen",
                   pass: !isBanActive,
-                  detail: isBanActive ? "Account is frozen" : "Account is active"
+                  detail: isBanActive ? (isTempBan ? "Temporarily banned" : "Permanently banned") : "Account is active"
                 },
                 {
                   label: "Minimum withdrawal (Rs 1,000)",
@@ -774,7 +916,6 @@ const AdminUserDetail = () => {
             <Card className="shadow-neu"><CardContent className="p-8 text-center text-muted-foreground text-sm">No device logs found</CardContent></Card>
           ) : (
             <>
-              {/* Suspicious activity check */}
               {(() => {
                 const ips = [...new Set(deviceLogs.map(d => d.ip_address).filter(Boolean))];
                 const fps = [...new Set(deviceLogs.map(d => d.fingerprint).filter(Boolean))];

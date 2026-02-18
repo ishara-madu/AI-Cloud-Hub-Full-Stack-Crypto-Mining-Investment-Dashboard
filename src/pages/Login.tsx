@@ -10,11 +10,13 @@ import { toast } from "sonner";
 import { Loader2, Cloud } from "lucide-react";
 import { logDeviceAdvanced } from "@/lib/fingerprint";
 
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,7 +32,7 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) { toast.error("Please fill in all fields"); return; }
-    if (!privacyAccepted) { toast.error("Please accept the Privacy Policy to continue"); return; }
+    if (!privacyAccepted || !termsAccepted) { toast.error("Please accept the Privacy Policy and Terms & Conditions to continue"); return; }
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
@@ -65,15 +67,25 @@ const Login = () => {
             </div>
             <Input type="password" placeholder="••••••••" className="rounded-xl h-12 shadow-neu-inset bg-muted/30" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
-          <div className="flex items-start gap-2">
-            <Checkbox id="privacy-login" checked={privacyAccepted} onCheckedChange={(checked) => setPrivacyAccepted(checked === true)} className="mt-0.5" />
-            <label htmlFor="privacy-login" className="text-xs text-muted-foreground leading-tight">
-              I have read and agree to the{" "}
-              <Link to="/privacy-policy" className="text-primary hover:underline font-medium">Privacy Policy</Link>
-              , including device tracking and account management practices.
-            </label>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <Checkbox id="privacy-login" checked={privacyAccepted} onCheckedChange={(checked) => setPrivacyAccepted(checked === true)} className="mt-0.5" />
+              <label htmlFor="privacy-login" className="text-xs text-muted-foreground leading-tight">
+                I have read and agree to the{" "}
+                <Link to="/privacy-policy" className="text-primary hover:underline font-medium">Privacy Policy</Link>
+                , including device tracking and account management practices.
+              </label>
+            </div>
+            <div className="flex items-start gap-2">
+              <Checkbox id="terms-login" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked === true)} className="mt-0.5" />
+              <label htmlFor="terms-login" className="text-xs text-muted-foreground leading-tight">
+                I have read and agree to the{" "}
+                <Link to="/terms" className="text-primary hover:underline font-medium">Terms & Conditions</Link>
+                , including ban policies, credit score system, and earnings rules.
+              </label>
+            </div>
           </div>
-          <Button type="submit" className="w-full rounded-xl h-12 gradient-primary text-primary-foreground font-semibold text-base mt-2" disabled={loading || !privacyAccepted}>
+          <Button type="submit" className="w-full rounded-xl h-12 gradient-primary text-primary-foreground font-semibold text-base mt-2" disabled={loading || !privacyAccepted || !termsAccepted}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Login
           </Button>
           <p className="text-sm text-center text-muted-foreground mt-4">

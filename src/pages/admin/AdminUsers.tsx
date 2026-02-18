@@ -35,7 +35,7 @@ const AdminUsers = () => {
   const [notifTitle, setNotifTitle] = useState("");
   const [notifDesc, setNotifDesc] = useState("");
   const [sending, setSending] = useState(false);
-  const [banDialog, setBanDialog] = useState<{ users: UserRow[]; mode: "bulk" | "single"; currentIndex: number } | null>(null);
+  const [banDialog, setBanDialog] = useState<{ users: UserRow[]; mode: "bulk" | "single"; currentIndex: number; durationHours: string } | null>(null);
   const [banning, setBanning] = useState(false);
 
   const fetchUsers = async () => {
@@ -79,13 +79,15 @@ const AdminUsers = () => {
     fetchUsers();
   };
 
-  const executeBan = async (userId: string, displayName: string | null) => {
+  const executeBan = async (userId: string, displayName: string | null, durationHours?: string) => {
     setBanning(true);
-    const { data, error } = await supabase.rpc("ban_user", { p_user_id: userId });
+    const hours = durationHours ? parseInt(durationHours) : null;
+    const { data, error } = await supabase.rpc("ban_user", { p_user_id: userId, p_duration_hours: hours } as any);
     if (error || (data && !(data as any).success)) {
       toast.error((data as any)?.error || error?.message || "Ban failed");
     } else {
-      toast.success(`${displayName || "User"} banned (Credit: ${(data as any).new_credit_score}%)`);
+      const d = data as any;
+      toast.success(`${displayName || "User"} banned (Credit: ${d.new_credit_score}%)${d.is_temporary ? ` — temp ${hours}h` : " — permanent"}`);
     }
     setBanning(false);
     fetchUsers();
@@ -96,7 +98,7 @@ const AdminUsers = () => {
       // Show ban dialog with history
       const user = users.find(u => u.user_id === userId);
       if (user) {
-        setBanDialog({ users: [user], mode: "single", currentIndex: 0 });
+        setBanDialog({ users: [user], mode: "single", currentIndex: 0, durationHours: "" });
       }
       return;
     }
@@ -114,7 +116,7 @@ const AdminUsers = () => {
   const handleBulkBan = (userIds: string[]) => {
     const targets = users.filter(u => userIds.includes(u.user_id) && !u.is_frozen);
     if (targets.length === 0) { toast.error("No unbanned users selected"); return; }
-    setBanDialog({ users: targets, mode: "bulk", currentIndex: 0 });
+    setBanDialog({ users: targets, mode: "bulk", currentIndex: 0, durationHours: "" });
   };
 
   const handleDecreaseBalance = async (userId: string, currentBalance: number) => {
@@ -293,7 +295,6 @@ const AdminUsers = () => {
 
           {banDialog && (
             <div className="space-y-3">
-              {/* Current user being reviewed */}
               {(() => {
                 const u = banDialog.users[banDialog.currentIndex];
                 if (!u) return null;
@@ -315,57 +316,59 @@ const AdminUsers = () => {
                   </div>
                 );
               })()}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground">Ban Duration (leave empty for permanent)</label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Hours (e.g. 24) — empty = permanent"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm h-9"
+                  value={banDialog.durationHours}
+                  onChange={e => setBanDialog({ ...banDialog, durationHours: e.target.value })}
+                />
+                <div className="flex gap-1.5 flex-wrap">
+                  {["1", "6", "24", "72", "168"].map(h => (
+                    <button key={h} onClick={() => setBanDialog({ ...banDialog, durationHours: h })}
+                      className={`text-[10px] px-2 py-1 rounded-lg border transition-colors ${banDialog.durationHours === h ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}
+                    >{h}h</button>
+                  ))}
+                  <button onClick={() => setBanDialog({ ...banDialog, durationHours: "" })}
+                    className={`text-[10px] px-2 py-1 rounded-lg border transition-colors ${!banDialog.durationHours ? "bg-destructive text-destructive-foreground border-destructive" : "border-border text-muted-foreground"}`}
+                  >Permanent</button>
+                </div>
+              </div>
             </div>
           )}
 
           <DialogFooter className="flex-col gap-2 sm:flex-col">
             {banDialog?.mode === "bulk" && (
               <>
-                <Button
-                  variant="destructive"
-                  className="w-full rounded-xl"
-                  disabled={banning}
+                <Button variant="destructive" className="w-full rounded-xl" disabled={banning}
                   onClick={async () => {
-                    // Ban current one and move to next
                     const u = banDialog.users[banDialog.currentIndex];
-                    await executeBan(u.user_id, u.display_name);
+                    await executeBan(u.user_id, u.display_name, banDialog.durationHours);
                     if (banDialog.currentIndex + 1 < banDialog.users.length) {
                       setBanDialog({ ...banDialog, currentIndex: banDialog.currentIndex + 1 });
-                    } else {
-                      setBanDialog(null);
-                    }
+                    } else { setBanDialog(null); }
                   }}
                 >
                   {banning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Ban This User & Next
+                  {banDialog.durationHours ? `Temp Ban ${banDialog.durationHours}h & Next` : "Permanent Ban & Next"}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full rounded-xl text-xs"
+                <Button variant="outline" className="w-full rounded-xl text-xs"
                   onClick={() => {
-                    // Skip to next
                     if (banDialog.currentIndex + 1 < banDialog.users.length) {
                       setBanDialog({ ...banDialog, currentIndex: banDialog.currentIndex + 1 });
-                    } else {
-                      setBanDialog(null);
-                    }
+                    } else { setBanDialog(null); }
                   }}
-                >
-                  Skip This User
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="w-full rounded-xl"
-                  disabled={banning}
+                >Skip This User</Button>
+                <Button variant="destructive" className="w-full rounded-xl" disabled={banning}
                   onClick={async () => {
-                    // Ban all remaining
                     setBanning(true);
                     for (let i = banDialog.currentIndex; i < banDialog.users.length; i++) {
-                      const u = banDialog.users[i];
-                      await executeBan(u.user_id, u.display_name);
+                      await executeBan(banDialog.users[i].user_id, banDialog.users[i].display_name, banDialog.durationHours);
                     }
-                    setBanning(false);
-                    setBanDialog(null);
+                    setBanning(false); setBanDialog(null);
                   }}
                 >
                   {banning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -374,18 +377,15 @@ const AdminUsers = () => {
               </>
             )}
             {banDialog?.mode === "single" && (
-              <Button
-                variant="destructive"
-                className="w-full rounded-xl"
-                disabled={banning}
+              <Button variant="destructive" className="w-full rounded-xl" disabled={banning}
                 onClick={async () => {
                   const u = banDialog.users[0];
-                  await executeBan(u.user_id, u.display_name);
+                  await executeBan(u.user_id, u.display_name, banDialog.durationHours);
                   setBanDialog(null);
                 }}
               >
                 {banning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Confirm Ban
+                {banDialog.durationHours ? `Confirm Temp Ban (${banDialog.durationHours}h)` : "Confirm Permanent Ban"}
               </Button>
             )}
             <Button variant="ghost" onClick={() => setBanDialog(null)} className="w-full rounded-xl">Cancel</Button>

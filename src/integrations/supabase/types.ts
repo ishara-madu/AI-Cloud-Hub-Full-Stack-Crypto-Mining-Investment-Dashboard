@@ -318,6 +318,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           ban_count: number
+          ban_expires_at: string | null
           created_at: string
           credit_score: number
           display_name: string | null
@@ -334,6 +335,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           ban_count?: number
+          ban_expires_at?: string | null
           created_at?: string
           credit_score?: number
           display_name?: string | null
@@ -350,6 +352,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           ban_count?: number
+          ban_expires_at?: string | null
           created_at?: string
           credit_score?: number
           display_name?: string | null
@@ -655,8 +658,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_reset_all_data: { Args: never; Returns: Json }
       approve_deposit: { Args: { p_deposit_id: string }; Returns: Json }
-      ban_user: { Args: { p_user_id: string }; Returns: Json }
+      ban_user:
+        | { Args: { p_user_id: string }; Returns: Json }
+        | {
+            Args: { p_duration_hours?: number; p_user_id: string }
+            Returns: Json
+          }
       claim_package_daily_income: { Args: never; Returns: Json }
       daily_checkin: { Args: never; Returns: Json }
       generate_referral_code: { Args: never; Returns: string }
@@ -668,6 +677,7 @@ export type Database = {
         Returns: boolean
       }
       process_all_daily_incomes: { Args: never; Returns: Json }
+      process_expired_bans: { Args: never; Returns: Json }
       purchase_package: { Args: { p_package_id: string }; Returns: Json }
       submit_withdrawal: {
         Args: { p_amount: number; p_bank_account_id: string }
