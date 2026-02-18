@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 
 const emptyForm = {
   name: "", description: "", price_onetime: "", price_monthly: "",
-  cashback_percent: "", bonus_tag: "", duration_days: "30",
+  cashback_percent: "", bonus_tag: "", duration_days: "30", stock_count: "",
 };
 
 const AdminPackages = () => {
@@ -49,6 +49,7 @@ const AdminPackages = () => {
       cashback_percent: form.cashback_percent ? parseFloat(form.cashback_percent) : 0,
       bonus_tag: form.bonus_tag || null,
       duration_days: parseInt(form.duration_days) || 30,
+      stock_count: form.stock_count ? parseInt(form.stock_count) : null,
       features: [],
     });
     setSaving(false);
@@ -70,6 +71,7 @@ const AdminPackages = () => {
       cashback_percent: pkg.cashback_percent?.toString() || "",
       bonus_tag: pkg.bonus_tag || "",
       duration_days: pkg.duration_days?.toString() || "30",
+      stock_count: pkg.stock_count?.toString() || "",
     });
   };
 
@@ -84,6 +86,7 @@ const AdminPackages = () => {
       cashback_percent: form.cashback_percent ? parseFloat(form.cashback_percent) : 0,
       bonus_tag: form.bonus_tag || null,
       duration_days: parseInt(form.duration_days) || 30,
+      stock_count: form.stock_count ? parseInt(form.stock_count) : null,
     }).eq("id", editingId!);
     setSaving(false);
     if (error) { toast.error("Failed to update"); return; }
@@ -111,10 +114,11 @@ const AdminPackages = () => {
         <div className="space-y-1"><Label className="text-xs">One-time Price</Label><Input type="number" className="rounded-xl h-9" value={form.price_onetime} onChange={(e) => setForm({ ...form, price_onetime: e.target.value })} /></div>
         <div className="space-y-1"><Label className="text-xs">Monthly Price</Label><Input type="number" className="rounded-xl h-9" value={form.price_monthly} onChange={(e) => setForm({ ...form, price_monthly: e.target.value })} /></div>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <div className="space-y-1"><Label className="text-xs">Cashback %</Label><Input type="number" className="rounded-xl h-9" value={form.cashback_percent} onChange={(e) => setForm({ ...form, cashback_percent: e.target.value })} /></div>
         <div className="space-y-1"><Label className="text-xs">Tag</Label><Input className="rounded-xl h-9" placeholder="HOT/NEW" value={form.bonus_tag} onChange={(e) => setForm({ ...form, bonus_tag: e.target.value })} /></div>
         <div className="space-y-1"><Label className="text-xs">Days</Label><Input type="number" className="rounded-xl h-9" value={form.duration_days} onChange={(e) => setForm({ ...form, duration_days: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">Stock</Label><Input type="number" className="rounded-xl h-9" placeholder="∞" value={form.stock_count} onChange={(e) => setForm({ ...form, stock_count: e.target.value })} /></div>
       </div>
     </div>
   );
@@ -172,8 +176,9 @@ const AdminPackages = () => {
                       <p className="text-xs text-muted-foreground">
                         {pkg.price_onetime ? `Rs ${Number(pkg.price_onetime).toLocaleString()}` : ""}
                         {pkg.price_monthly ? ` Rs ${Number(pkg.price_monthly).toLocaleString()}/mo` : ""}
-                        {pkg.cashback_percent ? ` | ${pkg.cashback_percent}% cashback` : ""}
+                        {pkg.cashback_percent ? ` | ${pkg.cashback_percent}% cb` : ""}
                         {pkg.duration_days ? ` | ${pkg.duration_days}d` : ""}
+                        {pkg.stock_count != null ? ` | Stock: ${pkg.stock_count}` : " | Stock: ∞"}
                       </p>
                     </div>
                   </div>

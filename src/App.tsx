@@ -24,6 +24,7 @@ import Redeem from "./pages/Redeem";
 import Notifications from "./pages/Notifications";
 import CommissionDetails from "./pages/CommissionDetails";
 import BankInfo from "./pages/BankInfo";
+import EarnedHistory from "./pages/EarnedHistory";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -74,6 +75,7 @@ const App = () => (
             <Route path="/notifications" element={<ProtectedPage><Notifications /></ProtectedPage>} />
             <Route path="/bank-info" element={<ProtectedPage><BankInfo /></ProtectedPage>} />
             <Route path="/commission-details" element={<ProtectedPage><CommissionDetails /></ProtectedPage>} />
+            <Route path="/earned-history" element={<ProtectedPage><EarnedHistory /></ProtectedPage>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
             <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />

@@ -60,6 +60,7 @@ export type Database = {
           name: string
           price_monthly: number | null
           price_onetime: number | null
+          stock_count: number | null
         }
         Insert: {
           bonus_tag?: string | null
@@ -73,6 +74,7 @@ export type Database = {
           name: string
           price_monthly?: number | null
           price_onetime?: number | null
+          stock_count?: number | null
         }
         Update: {
           bonus_tag?: string | null
@@ -86,6 +88,7 @@ export type Database = {
           name?: string
           price_monthly?: number | null
           price_onetime?: number | null
+          stock_count?: number | null
         }
         Relationships: []
       }

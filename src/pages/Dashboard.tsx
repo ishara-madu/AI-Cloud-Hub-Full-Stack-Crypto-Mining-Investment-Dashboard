@@ -360,38 +360,23 @@ const Dashboard = () => {
               <Clock className="w-3 h-3" /> Refreshes in {countdown}
             </span>
           </div>
-          {/* Balance + today's income summary */}
-          <div className="shadow-neu rounded-2xl bg-card p-4 mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-0.5">Account Balance</p>
-              <p className="text-2xl font-heading font-bold text-foreground">
-                Rs {(wallet?.balance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0 })}
-              </p>
-            </div>
-            {todayPackageIncome > 0 && (
-              <div className="text-right">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Credited Today</p>
-                <p className="text-base font-heading font-bold text-success">+Rs {todayPackageIncome.toLocaleString()}</p>
-              </div>
-            )}
-          </div>
-          {/* Three distinct stats */}
+          {/* Three distinct stats - Today only */}
           <div className="grid grid-cols-3 gap-3">
             <div className="shadow-neu rounded-xl bg-card p-3 text-center">
-              <p className="text-[10px] text-muted-foreground leading-tight">Today Earned</p>
-              <p className="text-sm font-heading font-bold mt-1 text-success">Rs {commissionTotal.toLocaleString()}</p>
-              <p className="text-[9px] text-muted-foreground mt-0.5">Pkg + Referrals</p>
-            </div>
-            <div className="shadow-neu rounded-xl bg-card p-3 text-center">
-              <p className="text-[10px] text-muted-foreground leading-tight">Today Pkg</p>
-              <p className="text-sm font-heading font-bold mt-1 text-primary">Rs {todayPackageIncome.toLocaleString()}</p>
-              <p className="text-[9px] text-muted-foreground mt-0.5">Package only</p>
-            </div>
-            <div className="shadow-neu rounded-xl bg-card p-3 text-center">
               <p className="text-[10px] text-muted-foreground leading-tight">Total Earned</p>
-              <p className="text-sm font-heading font-bold mt-1 text-foreground">Rs {(wallet?.total_commission ?? 0).toLocaleString()}</p>
-              <p className="text-[9px] text-muted-foreground mt-0.5">All time</p>
+              <p className="text-sm font-heading font-bold mt-1 text-success">Rs {commissionTotal.toLocaleString()}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Today</p>
             </div>
+            <div className="shadow-neu rounded-xl bg-card p-3 text-center">
+              <p className="text-[10px] text-muted-foreground leading-tight">Credited Today</p>
+              <p className="text-sm font-heading font-bold mt-1 text-primary">Rs {todayPackageIncome.toLocaleString()}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Packages</p>
+            </div>
+            <Link to="/earned-history" className="shadow-neu rounded-xl bg-card p-3 text-center flex flex-col items-center justify-center gap-0.5 hover:bg-primary/5 transition-colors">
+              <p className="text-[10px] text-muted-foreground leading-tight">View All</p>
+              <ChevronRight className="w-4 h-4 text-primary mt-0.5" />
+              <p className="text-[9px] text-primary font-medium">History</p>
+            </Link>
           </div>
         </div>
 

@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_packages ADD COLUMN IF NOT EXISTS stock_count integer DEFAULT NULL;
