@@ -142,6 +142,15 @@
     animation: scroll-left 12s linear infinite;
   }
 
+  /* Slide-down animation for new live withdrawal entries */
+  @keyframes slide-down {
+    0% { opacity: 0; transform: translateY(-100%); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-down {
+    animation: slide-down 0.4s ease-out forwards;
+  }
+
   /* Hide scrollbar for horizontal scroll */
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

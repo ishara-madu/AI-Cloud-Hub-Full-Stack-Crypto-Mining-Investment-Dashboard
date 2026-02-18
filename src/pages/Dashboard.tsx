@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/carousel";
 import { Link } from "react-router-dom";
 import {
-  ArrowDownToLine, ArrowUpFromLine, Package, Users, Copy,
-  ChevronRight, FileText, HelpCircle, BarChart3, Headphones, Download, LogOut,
+  ArrowDownToLine, ArrowUpFromLine,
+  ChevronRight, Headphones,
   Brain, Database as DbIcon, Cpu, Server, Zap, Star,
   Megaphone, CalendarCheck, Send, Wallet, Banknote, Info,
   Clock,
@@ -60,28 +60,12 @@ interface SliderBanner {
   image_url: string | null;
 }
 
-// --- Random data generators ---
-const randomEmail = () => {
-  const names = ["sam", "nimal", "kamal", "saman", "ruwan", "dilshan", "chamara", "thilina", "nuwan", "kasun", "supun", "dasun", "dinesh", "amila", "lahiru", "hasitha", "pradeep", "suresh", "roshan", "janaka"];
-  const name = names[Math.floor(Math.random() * names.length)];
-  const num = Math.floor(Math.random() * 900) + 100;
-  return `${name}${num}@gmail.com`;
-};
-const randomAmount = (min: number, max: number) =>
-  Math.round((Math.floor(Math.random() * (max - min + 1)) + min) / 50) * 50;
-
-const marqueeTemplates = [
-  (p: string, a: number) => `${p} withdrew Rs.${a.toLocaleString()} successfully ✅`,
-  (p: string, a: number) => `${p} deposited Rs.${a.toLocaleString()} via bank transfer`,
-  (p: string, a: number) => `${p} received Rs.${a.toLocaleString()} bonus credits 🎁`,
-  (p: string, a: number) => `${p} rented AI Pack and earned Rs.${a.toLocaleString()} cashback`,
-  (p: string, a: number) => `${p} purchased GPU Package — Rs.${a.toLocaleString()}`,
-];
-
-const generateMarqueeMsg = () => {
-  const tpl = marqueeTemplates[Math.floor(Math.random() * marqueeTemplates.length)];
-  return tpl(randomEmail(), randomAmount(500, 25000));
-};
+interface LivePayout {
+  user: string;
+  amount: number;
+  key: number;
+  type: string;
+}
 
 const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
 
@@ -95,20 +79,22 @@ const quickActions: { label: string; icon: any; path: string; dot?: boolean; ext
 ];
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [packages, setPackages] = useState<AiPackage[]>([]);
   const [referralCode, setReferralCode] = useState("");
   const [commissionTotal, setCommissionTotal] = useState(0);
   const [userPackages, setUserPackages] = useState<UserPackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [marqueeMsg, setMarqueeMsg] = useState(() => generateMarqueeMsg());
-  const [livePayouts, setLivePayouts] = useState<{ user: string; amount: number; key: number }[]>([]);
+  const [marqueeMsg, setMarqueeMsg] = useState("");
+  const [marqueeKey, setMarqueeKey] = useState(0);
+  const [livePayouts, setLivePayouts] = useState<LivePayout[]>([]);
   const [banners, setBanners] = useState<SliderBanner[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [dailyCheckedIn, setDailyCheckedIn] = useState(false);
   const [todayPackageIncome, setTodayPackageIncome] = useState(0);
+  const [countdown, setCountdown] = useState("23h 59m");
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -117,6 +103,24 @@ const Dashboard = () => {
     onSelect();
     return () => { carouselApi.off("select", onSelect); };
   }, [carouselApi]);
+
+  // Countdown timer
+  useEffect(() => {
+    const now = new Date();
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    const diff = endOfDay.getTime() - now.getTime();
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    setCountdown(`${h}h ${m}m`);
+    const timer = setInterval(() => {
+      const n = new Date();
+      const d = endOfDay.getTime() - n.getTime();
+      if (d <= 0) { setCountdown("0h 0m"); return; }
+      setCountdown(`${Math.floor(d / 3600000)}h ${Math.floor((d % 3600000) / 60000)}m`);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Refresh today's transaction stats from DB
   const refreshTodayStats = useCallback(async () => {
@@ -133,10 +137,89 @@ const Dashboard = () => {
     setCommissionTotal(todayAllComm);
   }, [user]);
 
+  // Fetch real activity data for marquee and live withdrawals
+  const fetchRealActivityData = useCallback(async () => {
+    const [withdrawalsRes, depositsRes, commissionsRes] = await Promise.all([
+      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "withdrawal").eq("status", "pending").order("created_at", { ascending: false }).limit(20),
+      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "deposit").eq("status", "approved").order("created_at", { ascending: false }).limit(15),
+      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "commission").eq("status", "approved").order("created_at", { ascending: false }).limit(15),
+    ]);
+
+    const withdrawals = withdrawalsRes.data || [];
+    const deposits = depositsRes.data || [];
+    const commissions = commissionsRes.data || [];
+
+    // Collect all user IDs and fetch their display names
+    const allUserIds = [...new Set([
+      ...withdrawals.map((w: any) => w.user_id),
+      ...deposits.map((d: any) => d.user_id),
+      ...commissions.map((c: any) => c.user_id),
+    ])];
+
+    const profileEmailMap = new Map<string, string>();
+    if (allUserIds.length > 0) {
+      const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", allUserIds);
+      (profiles || []).forEach((p: any) => {
+        const name = (p.display_name || "user").toLowerCase().replace(/\s+/g, "");
+        profileEmailMap.set(p.user_id, name.slice(0, 3) + "***@gmail.com");
+      });
+    }
+
+    // Build combined activity list
+    type ActivityItem = { user: string; amount: number; type: string; created_at: string };
+    const allActivity: ActivityItem[] = [];
+
+    withdrawals.forEach((w: any) => {
+      allActivity.push({ user: profileEmailMap.get(w.user_id) || "use***@gmail.com", amount: Number(w.amount), type: "withdrawal", created_at: w.created_at });
+    });
+    deposits.forEach((d: any) => {
+      allActivity.push({ user: profileEmailMap.get(d.user_id) || "use***@gmail.com", amount: Number(d.amount), type: "deposit", created_at: d.created_at });
+    });
+    commissions.forEach((c: any) => {
+      allActivity.push({ user: profileEmailMap.get(c.user_id) || "use***@gmail.com", amount: Number(c.amount), type: "commission", created_at: c.created_at });
+    });
+
+    allActivity.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // Live Withdrawals feed (withdrawals only)
+    const withdrawalPayouts = allActivity.filter(a => a.type === "withdrawal").slice(0, 15).map((a, i) => ({ ...a, key: i }));
+    if (withdrawalPayouts.length > 0) {
+      setLivePayouts(withdrawalPayouts);
+    }
+
+    // Build marquee messages from all real activity
+    const buildMsg = (item: ActivityItem) => {
+      if (item.type === "withdrawal") return `${item.user} withdrew Rs.${item.amount.toLocaleString()} successfully ✅`;
+      if (item.type === "deposit") return `${item.user} deposited Rs.${item.amount.toLocaleString()} via bank transfer`;
+      return `${item.user} earned Rs.${item.amount.toLocaleString()} commission 🎉`;
+    };
+
+    if (allActivity.length > 0) {
+      // Start with a random item
+      const startIdx = Math.floor(Math.random() * allActivity.length);
+      setMarqueeMsg(buildMsg(allActivity[startIdx]));
+      setMarqueeKey(k => k + 1);
+
+      // Rotate through real items — each unique message shown once before repeating
+      let idx = startIdx;
+      const schedule = (): ReturnType<typeof setTimeout> => {
+        const delay = 12000 + Math.random() * 18000;
+        return setTimeout(() => {
+          idx = (idx + 1) % allActivity.length;
+          setMarqueeMsg(buildMsg(allActivity[idx]));
+          setMarqueeKey(k => k + 1);
+          timerRef = schedule();
+        }, delay);
+      };
+      let timerRef = schedule();
+      return () => clearTimeout(timerRef);
+    }
+  }, []);
+
+  // Main data fetch
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      // UTC midnight — used to filter "today's" transactions
       const todayStartUtc = new Date();
       todayStartUtc.setUTCHours(0, 0, 0, 0);
 
@@ -168,26 +251,39 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  // Real-time wallet subscription — instantly reflects any balance change
-  // (referral commissions, sign-in rewards, package purchase income, midnight cron, etc.)
+  // Fetch real activity (marquee + live withdrawals)
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    fetchRealActivityData().then(fn => { cleanup = fn; });
+    return () => { if (cleanup) cleanup(); };
+  }, [fetchRealActivityData]);
+
+  // Real-time subscriptions
   useEffect(() => {
     if (!user) return;
+    let keyCounter = 1000;
+
     const channel = supabase
-      .channel(`wallet-realtime-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          // Instantly update balance when wallet changes (any income source)
-          setWallet(payload.new as WalletData);
-        }
+      .channel(`dashboard-realtime-${user.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` },
+        (payload) => { setWallet(payload.new as WalletData); }
       )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "transactions", filter: `user_id=eq.${user.id}` },
-        () => {
-          // Re-fetch today's commission stats whenever a new transaction arrives
-          refreshTodayStats();
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "transactions", filter: `user_id=eq.${user.id}` },
+        () => { refreshTodayStats(); }
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "transactions" },
+        async (payload) => {
+          const tx = payload.new as any;
+          if (tx.type === "withdrawal") {
+            const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", tx.user_id).maybeSingle();
+            const name = ((profile?.display_name || "user") as string).toLowerCase().replace(/\s+/g, "");
+            const masked = name.slice(0, 3) + "***@gmail.com";
+            const newItem: LivePayout = { user: masked, amount: Number(tx.amount), key: keyCounter++, type: "withdrawal" };
+            // Prepend with slide-down animation (new item appears at top)
+            setLivePayouts(prev => [newItem, ...prev.slice(0, 14)]);
+            setMarqueeMsg(`${masked} withdrew Rs.${Number(tx.amount).toLocaleString()} successfully ✅`);
+            setMarqueeKey(k => k + 1);
+          }
         }
       )
       .subscribe();
@@ -195,67 +291,8 @@ const Dashboard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user, refreshTodayStats]);
 
-  // Marquee rotation with realistic low-traffic delays (15-45 seconds)
-  useEffect(() => {
-    const rotate = () => {
-      setMarqueeMsg(generateMarqueeMsg());
-    };
-    const schedule = () => {
-      const delay = 15000 + Math.random() * 30000; // 15-45 seconds
-      return setTimeout(() => {
-        rotate();
-        timerRef = schedule();
-      }, delay);
-    };
-    let timerRef = schedule();
-    return () => clearTimeout(timerRef);
-  }, []);
-
-  // Live payouts: slow realistic pace for low-traffic site
-  useEffect(() => {
-    let keyCounter = 0;
-    const addPayout = () => {
-      const newItem = { user: randomEmail(), amount: randomAmount(500, 20000), key: keyCounter++ };
-      setLivePayouts((prev) => [newItem, ...prev.slice(0, 19)]);
-    };
-    // Seed 3 initial items slowly
-    const seedTimeouts: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < 3; i++) {
-      seedTimeouts.push(setTimeout(() => addPayout(), i * 3000));
-    }
-    // Then add new ones every 20-60 seconds
-    const schedule = (): ReturnType<typeof setTimeout> => {
-      const delay = 20000 + Math.random() * 40000;
-      return setTimeout(() => {
-        addPayout();
-        timerRef = schedule();
-      }, delay);
-    };
-    let timerRef = setTimeout(() => { timerRef = schedule(); }, 12000);
-    return () => { seedTimeouts.forEach(clearTimeout); clearTimeout(timerRef); };
-  }, []);
-
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
   const copyLink = () => { navigator.clipboard.writeText(referralLink); toast.success("Referral link copied!"); };
-
-  // Countdown timer
-  const [countdown, setCountdown] = useState("23h 59m");
-  useEffect(() => {
-    const now = new Date();
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
-    const diff = endOfDay.getTime() - now.getTime();
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    setCountdown(`${h}h ${m}m`);
-    const timer = setInterval(() => {
-      const n = new Date();
-      const d = endOfDay.getTime() - n.getTime();
-      if (d <= 0) { setCountdown("0h 0m"); return; }
-      setCountdown(`${Math.floor(d / 3600000)}h ${Math.floor((d % 3600000) / 60000)}m`);
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   if (loading) {
     return (
@@ -273,19 +310,19 @@ const Dashboard = () => {
     { id: "3", title: "Invite 5 Friends", subtitle: "Win Rs.5,000 Reward!", gradient: "from-orange-500 via-pink-500 to-purple-500", sort_order: 3, image_url: null },
   ];
 
-  // todayPackageIncome is set from the DB after auto-credit
-
   return (
     <div className="animate-fade-in">
       {/* ═══════ MARQUEE ═══════ */}
-      <div className="bg-primary/10 overflow-hidden h-8 flex items-center gap-2 px-3">
-        <Megaphone className="w-4 h-4 text-primary flex-shrink-0" />
-        <div className="overflow-hidden flex-1">
-          <div key={marqueeMsg} className="animate-scroll-left whitespace-nowrap text-xs text-primary font-medium">
-            🎉 {marqueeMsg}
+      {marqueeMsg && (
+        <div className="bg-primary/10 overflow-hidden h-8 flex items-center gap-2 px-3">
+          <Megaphone className="w-4 h-4 text-primary flex-shrink-0" />
+          <div className="overflow-hidden flex-1">
+            <div key={marqueeKey} className="animate-scroll-left whitespace-nowrap text-xs text-primary font-medium">
+              🎉 {marqueeMsg}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="px-4 py-4 space-y-5">
         {/* ═══════ PROMO CAROUSEL ═══════ */}
@@ -352,7 +389,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══════ MY INCOME ═══════ */}
+        {/* ═══════ TODAY'S OVERVIEW ═══════ */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-heading font-bold text-foreground">Today's Overview</h2>
@@ -360,7 +397,6 @@ const Dashboard = () => {
               <Clock className="w-3 h-3" /> Refreshes in {countdown}
             </span>
           </div>
-          {/* Three distinct stats - Today only */}
           <div className="grid grid-cols-3 gap-3">
             <div className="shadow-neu rounded-xl bg-card p-3 text-center">
               <p className="text-[10px] text-muted-foreground leading-tight">Total Earned</p>
@@ -536,19 +572,26 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══════ LIVE PAYOUTS ═══════ */}
+        {/* ═══════ LIVE WITHDRAWALS ═══════ */}
         <div>
           <h2 className="text-base font-heading font-bold text-foreground mb-3">Live Withdrawals</h2>
-          <div className="bg-card rounded-2xl shadow-neu overflow-hidden h-[150px] relative">
-            <div className="absolute inset-0 overflow-y-auto scrollbar-hide">
+          <div className="bg-card rounded-2xl shadow-neu overflow-hidden">
+            {livePayouts.length === 0 ? (
+              <div className="flex items-center justify-center h-[100px] text-sm text-muted-foreground">
+                No recent withdrawals
+              </div>
+            ) : (
               <div className="divide-y divide-border/50">
-                {livePayouts.map((p) => (
-                  <div key={p.key} className="flex items-center justify-between px-4 h-[38px] animate-fade-in">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                      <span>{p.user} withdrew</span>
+                {livePayouts.slice(0, 8).map((p) => (
+                  <div
+                    key={p.key}
+                    className="flex items-center justify-between px-4 h-[42px] animate-slide-down"
+                  >
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse flex-shrink-0" />
+                      <span className="truncate">{p.user} withdrew</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <span className="text-xs font-bold text-success">Rs.{p.amount.toLocaleString()}</span>
                       <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-success/30 text-success">
                         Success
@@ -557,6 +600,32 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* ═══════ REFERRAL SECTION ═══════ */}
+        <div className="shadow-neu rounded-2xl bg-card p-4 space-y-3">
+          <h2 className="text-base font-heading font-bold text-foreground">🤝 Invite & Earn</h2>
+          <p className="text-xs text-muted-foreground">Share your referral link and earn commissions on every deposit your team makes.</p>
+          <div className="flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-2.5">
+            <span className="flex-1 text-xs text-foreground font-mono truncate">{referralLink}</span>
+            <button onClick={copyLink} className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-primary/5 rounded-xl p-2">
+              <p className="text-[10px] text-muted-foreground">Tier 1</p>
+              <p className="text-sm font-bold text-primary">5%</p>
+            </div>
+            <div className="bg-secondary/5 rounded-xl p-2">
+              <p className="text-[10px] text-muted-foreground">Tier 2</p>
+              <p className="text-sm font-bold text-secondary">3%</p>
+            </div>
+            <div className="bg-muted rounded-xl p-2">
+              <p className="text-[10px] text-muted-foreground">Tier 3</p>
+              <p className="text-sm font-bold text-foreground">1%</p>
             </div>
           </div>
         </div>
