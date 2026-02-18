@@ -36,6 +36,7 @@ import AdminSliders from "./pages/admin/AdminSliders";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminUserPackages from "./pages/admin/AdminUserPackages";
 import AdminAlerts from "./pages/admin/AdminAlerts";
+import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
@@ -87,6 +88,7 @@ const App = () => (
             <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
             <Route path="/admin/user-packages" element={<AdminPage><AdminUserPackages /></AdminPage>} />
             <Route path="/admin/alerts" element={<AdminPage><AdminAlerts /></AdminPage>} />
+            <Route path="/admin/users/:userId" element={<AdminPage><AdminUserDetail /></AdminPage>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Search, User, Wallet, ShieldAlert, ShieldCheck, Send, Loader2, Copy, CreditCard, Crown, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface UserRow {
   user_id: string;
@@ -26,6 +26,7 @@ interface UserRow {
 }
 
 const AdminUsers = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -174,8 +175,8 @@ const AdminUsers = () => {
         {filtered.map((u) => (
           <Card key={u.user_id} className={`shadow-neu ${u.is_frozen ? 'ring-2 ring-destructive/50' : ''}`}>
             <CardContent className="p-5">
-              <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedUser(expandedUser === u.user_id ? null : u.user_id)}>
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => setExpandedUser(expandedUser === u.user_id ? null : u.user_id)}>
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                     <User className="w-5 h-5 text-primary" />
                   </div>
@@ -188,9 +189,12 @@ const AdminUsers = () => {
                     <p className="text-[10px] text-muted-foreground">ID: {u.user_id.slice(0, 8)}... | Credit: {u.credit_score}%</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex flex-col items-end gap-1">
                   <p className="text-sm font-bold text-foreground">Rs {(u.wallet?.balance ?? 0).toLocaleString()}</p>
                   <Badge className={u.role === "admin" ? "bg-red-500/20 text-red-500 text-[9px]" : "bg-primary/10 text-primary text-[9px]"}>{u.role}</Badge>
+                  <Link to={`/admin/users/${u.user_id}`} onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-6 text-[10px] text-primary px-2 rounded-lg">Full Details →</Button>
+                  </Link>
                 </div>
               </div>
 
