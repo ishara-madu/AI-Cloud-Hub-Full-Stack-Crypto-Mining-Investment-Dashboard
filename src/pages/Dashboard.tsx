@@ -65,6 +65,7 @@ interface LivePayout {
   amount: number;
   key: number;
   type: string;
+  isNew?: boolean;
 }
 
 const packageIcons = [Brain, DbIcon, Cpu, Server, Zap, Star];
@@ -140,7 +141,7 @@ const Dashboard = () => {
   // Fetch real activity data for marquee and live withdrawals
   const fetchRealActivityData = useCallback(async () => {
     const [withdrawalsRes, depositsRes, commissionsRes] = await Promise.all([
-      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "withdrawal").eq("status", "pending").order("created_at", { ascending: false }).limit(20),
+      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "withdrawal").eq("status", "approved").order("created_at", { ascending: false }).limit(20),
       supabase.from("transactions").select("amount, user_id, created_at").eq("type", "deposit").eq("status", "approved").order("created_at", { ascending: false }).limit(15),
       supabase.from("transactions").select("amount, user_id, created_at").eq("type", "commission").eq("status", "approved").order("created_at", { ascending: false }).limit(15),
     ]);
@@ -181,8 +182,8 @@ const Dashboard = () => {
 
     allActivity.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    // Live Withdrawals feed (withdrawals only)
-    const withdrawalPayouts = allActivity.filter(a => a.type === "withdrawal").slice(0, 15).map((a, i) => ({ ...a, key: i }));
+    // Live Withdrawals feed (withdrawals only) — no animation on initial load
+    const withdrawalPayouts = allActivity.filter(a => a.type === "withdrawal").slice(0, 15).map((a, i) => ({ ...a, key: i, isNew: false }));
     if (withdrawalPayouts.length > 0) {
       setLivePayouts(withdrawalPayouts);
     }
@@ -278,9 +279,9 @@ const Dashboard = () => {
             const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", tx.user_id).maybeSingle();
             const name = ((profile?.display_name || "user") as string).toLowerCase().replace(/\s+/g, "");
             const masked = name.slice(0, 3) + "***@gmail.com";
-            const newItem: LivePayout = { user: masked, amount: Number(tx.amount), key: keyCounter++, type: "withdrawal" };
+            const newItem: LivePayout = { user: masked, amount: Number(tx.amount), key: keyCounter++, type: "withdrawal", isNew: true };
             // Prepend with slide-down animation (new item appears at top)
-            setLivePayouts(prev => [newItem, ...prev.slice(0, 14)]);
+            setLivePayouts(prev => [newItem, ...prev.slice(0, 14).map(p => ({ ...p, isNew: false }))]);
             setMarqueeMsg(`${masked} withdrew Rs.${Number(tx.amount).toLocaleString()} successfully ✅`);
             setMarqueeKey(k => k + 1);
           }
@@ -585,7 +586,7 @@ const Dashboard = () => {
                 {livePayouts.slice(0, 8).map((p) => (
                   <div
                     key={p.key}
-                    className="flex items-center justify-between px-4 h-[42px] animate-slide-down"
+                    className={`flex items-center justify-between px-4 h-[42px] ${p.isNew ? 'animate-slide-down' : ''}`}
                   >
                     <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse flex-shrink-0" />
