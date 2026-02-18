@@ -1,11 +1,8 @@
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
 
 const TermsAndConditions = () => {
-  const [accepted, setAccepted] = useState(false);
   const navigate = useNavigate();
 
   return (
@@ -145,27 +142,13 @@ const TermsAndConditions = () => {
           </section>
         </div>
 
-        {/* Agreement checkbox at bottom */}
-        <div className="mt-8 p-4 rounded-xl border border-border bg-muted/30">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="terms-agree"
-              checked={accepted}
-              onCheckedChange={(checked) => setAccepted(checked === true)}
-              className="mt-0.5"
-            />
-            <label htmlFor="terms-agree" className="text-sm text-foreground leading-snug cursor-pointer">
-              I have read and agree to these Terms & Conditions, including ban policies, credit score system, earnings rules, and all platform rights.
-            </label>
-          </div>
-          {accepted && (
-            <Button
-              className="w-full mt-4 rounded-xl gradient-primary text-primary-foreground font-semibold"
-              onClick={() => navigate(-1)}
-            >
-              Done — Go Back
-            </Button>
-          )}
+        <div className="mt-8">
+          <Button
+            className="w-full rounded-xl gradient-primary text-primary-foreground font-semibold"
+            onClick={() => navigate(-1)}
+          >
+            I Understand — Go Back
+          </Button>
         </div>
       </div>
     </div>

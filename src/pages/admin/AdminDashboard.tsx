@@ -150,7 +150,7 @@ const AdminDashboard = () => {
           <p className="text-sm text-muted-foreground">Platform overview & analytics</p>
         </div>
         <div className="flex items-center gap-3">
-          <AdminNotificationBell />
+          <div className="hidden lg:block"><AdminNotificationBell /></div>
           <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30 text-xs">
             <Globe className="w-3 h-3 mr-1" /> Live
           </Badge>
