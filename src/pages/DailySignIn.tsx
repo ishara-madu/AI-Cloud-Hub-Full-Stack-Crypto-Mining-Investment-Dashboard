@@ -9,6 +9,18 @@ import { cn } from "@/lib/utils";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Sri Lanka timezone helpers (UTC+5:30)
+const getSriLankaDateStr = () => {
+  const sriLankaOffsetMs = 5.5 * 60 * 60 * 1000;
+  const sriLankaNow = new Date(Date.now() + sriLankaOffsetMs);
+  return sriLankaNow.toISOString().split("T")[0];
+};
+
+const getSriLankaDate = () => {
+  const sriLankaOffsetMs = 5.5 * 60 * 60 * 1000;
+  return new Date(Date.now() + sriLankaOffsetMs);
+};
+
 const DailySignIn = () => {
   const { user } = useAuth();
   const [checkedIn, setCheckedIn] = useState(false);
@@ -16,32 +28,34 @@ const DailySignIn = () => {
   const [checking, setChecking] = useState(false);
   const [weekSignins, setWeekSignins] = useState<string[]>([]);
 
-  const today = new Date().getDay();
+  // Use Sri Lanka date/day for UI
+  const sriLankaToday = getSriLankaDate();
+  const today = sriLankaToday.getUTCDay(); // UTC day on the shifted date = SL local day
   const todayIdx = today === 0 ? 6 : today - 1;
 
   useEffect(() => {
     if (!user) return;
     const fetchSignins = async () => {
-      // Get this week's sign-ins (Mon to Sun)
-      const now = new Date();
-      const dayOfWeek = now.getDay();
+      // Get this week's sign-ins (Mon to Sun) using Sri Lanka dates
+      const sriLankaNow = getSriLankaDate();
+      const dayOfWeek = sriLankaNow.getUTCDay();
       const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const monday = new Date(now);
-      monday.setDate(now.getDate() + mondayOffset);
-      monday.setHours(0, 0, 0, 0);
+      const monday = new Date(sriLankaNow);
+      monday.setUTCDate(sriLankaNow.getUTCDate() + mondayOffset);
+      const mondayStr = monday.toISOString().split("T")[0];
 
       const { data } = await supabase
         .from("daily_signins")
         .select("signed_in_date")
         .eq("user_id", user.id)
-        .gte("signed_in_date", monday.toISOString().split("T")[0])
+        .gte("signed_in_date", mondayStr)
         .order("signed_in_date", { ascending: true });
 
       const dates = (data || []).map((d: any) => d.signed_in_date);
       setWeekSignins(dates);
 
-      // Check if already signed in today
-      const todayStr = new Date().toISOString().split("T")[0];
+      // Check if already signed in today (Sri Lanka date)
+      const todayStr = getSriLankaDateStr();
       setCheckedIn(dates.includes(todayStr));
       setLoading(false);
     };
@@ -52,11 +66,11 @@ const DailySignIn = () => {
     if (!user || checkedIn) return;
     setChecking(true);
 
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getSriLankaDateStr();
 
     const { data, error } = await supabase.rpc("daily_checkin");
     if (error) {
-      toast.error("Failed to sign in");
+      toast.error("Check-in failed. Please try again.");
       setChecking(false);
       return;
     }
@@ -67,25 +81,26 @@ const DailySignIn = () => {
       return;
     }
 
+    const reward = result?.reward ?? 10;
     setCheckedIn(true);
-    setWeekSignins([...weekSignins, todayStr]);
-    toast.success("Success! Rs 10 added to balance.");
+    setWeekSignins(prev => [...prev, todayStr]);
+    toast.success(`✅ Checked in! Rs ${reward} added to your balance.`);
     setChecking(false);
   };
 
   // Calculate streak from this week's sign-ins
   const getStreak = () => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getSriLankaDateStr();
     const allDates = checkedIn ? [...new Set([...weekSignins, todayStr])] : weekSignins;
     return allDates.length;
   };
 
   const isDaySignedIn = (dayIdx: number) => {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
+    const sriLankaNow = getSriLankaDate();
+    const dayOfWeek = sriLankaNow.getUTCDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const targetDate = new Date(now);
-    targetDate.setDate(now.getDate() + mondayOffset + dayIdx);
+    const targetDate = new Date(sriLankaNow);
+    targetDate.setUTCDate(sriLankaNow.getUTCDate() + mondayOffset + dayIdx);
     const dateStr = targetDate.toISOString().split("T")[0];
     return weekSignins.includes(dateStr);
   };

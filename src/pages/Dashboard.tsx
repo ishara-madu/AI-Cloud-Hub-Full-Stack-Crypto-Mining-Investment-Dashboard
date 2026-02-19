@@ -105,32 +105,63 @@ const Dashboard = () => {
     return () => { carouselApi.off("select", onSelect); };
   }, [carouselApi]);
 
-  // Countdown timer
+  // Countdown timer — counts to Sri Lanka midnight (UTC+5:30)
   useEffect(() => {
-    const now = new Date();
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
-    const diff = endOfDay.getTime() - now.getTime();
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    setCountdown(`${h}h ${m}m`);
-    const timer = setInterval(() => {
-      const n = new Date();
-      const d = endOfDay.getTime() - n.getTime();
-      if (d <= 0) { setCountdown("0h 0m"); return; }
-      setCountdown(`${Math.floor(d / 3600000)}h ${Math.floor((d % 3600000) / 60000)}m`);
-    }, 60000);
+    const getSriLankaMidnight = () => {
+      // Sri Lanka offset: UTC+5:30 = 330 minutes
+      const now = new Date();
+      const sriLankaOffsetMs = 5.5 * 60 * 60 * 1000;
+      const sriLankaNow = new Date(now.getTime() + sriLankaOffsetMs);
+      const sriLankaMidnight = new Date(Date.UTC(
+        sriLankaNow.getUTCFullYear(),
+        sriLankaNow.getUTCMonth(),
+        sriLankaNow.getUTCDate() + 1,
+        0, 0, 0, 0
+      ));
+      // Convert midnight back to UTC
+      return new Date(sriLankaMidnight.getTime() - sriLankaOffsetMs);
+    };
+
+    const calcCountdown = () => {
+      const diff = getSriLankaMidnight().getTime() - Date.now();
+      if (diff <= 0) return "0h 0m";
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      return `${h}h ${m}m`;
+    };
+
+    setCountdown(calcCountdown());
+    const timer = setInterval(() => setCountdown(calcCountdown()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Get Sri Lanka midnight in UTC (start of today in Asia/Colombo)
+  const getSriLankaDayStart = () => {
+    const sriLankaOffsetMs = 5.5 * 60 * 60 * 1000;
+    const sriLankaNow = new Date(Date.now() + sriLankaOffsetMs);
+    const sriLankaMidnight = new Date(Date.UTC(
+      sriLankaNow.getUTCFullYear(),
+      sriLankaNow.getUTCMonth(),
+      sriLankaNow.getUTCDate(),
+      0, 0, 0, 0
+    ));
+    return new Date(sriLankaMidnight.getTime() - sriLankaOffsetMs);
+  };
+
+  // Get today's date string in Sri Lanka timezone (YYYY-MM-DD)
+  const getSriLankaDateStr = () => {
+    const sriLankaOffsetMs = 5.5 * 60 * 60 * 1000;
+    const sriLankaNow = new Date(Date.now() + sriLankaOffsetMs);
+    return sriLankaNow.toISOString().split("T")[0];
+  };
 
   // Refresh today's transaction stats from DB
   const refreshTodayStats = useCallback(async () => {
     if (!user) return;
-    const todayStartUtc = new Date();
-    todayStartUtc.setUTCHours(0, 0, 0, 0);
+    const todayStart = getSriLankaDayStart();
     const [todayIncomeRes, todayAllCommRes] = await Promise.all([
-      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStartUtc.toISOString()),
-      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStartUtc.toISOString()),
+      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStart.toISOString()),
+      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStart.toISOString()),
     ]);
     const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
     const todayAllComm = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
@@ -217,8 +248,8 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const todayStartUtc = new Date();
-      todayStartUtc.setUTCHours(0, 0, 0, 0);
+      const todayStart = getSriLankaDayStart();
+      const todayDateStr = getSriLankaDateStr();
 
       const [walletRes, pkgRes, profileRes, upRes, bannersRes, todayIncomeRes, todayAllCommRes, signinRes] = await Promise.all([
         supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle(),
@@ -226,9 +257,9 @@ const Dashboard = () => {
         supabase.from("profiles").select("referral_code").eq("user_id", user.id).maybeSingle(),
         supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).eq("is_active", true).order("purchased_at", { ascending: false }),
         supabase.from("slider_banners").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
-        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStartUtc.toISOString()),
-        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStartUtc.toISOString()),
-        supabase.from("daily_signins").select("id").eq("user_id", user.id).eq("signed_in_date", new Date().toISOString().split("T")[0]).maybeSingle(),
+        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStart.toISOString()),
+        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStart.toISOString()),
+        supabase.from("daily_signins").select("id").eq("user_id", user.id).eq("signed_in_date", todayDateStr).maybeSingle(),
       ]);
 
       setWallet(walletRes.data as WalletData | null);

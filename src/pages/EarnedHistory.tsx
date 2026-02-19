@@ -40,8 +40,16 @@ const EarnedHistory = () => {
   useEffect(() => {
     if (!user) return;
     const fetchTodayEarned = async () => {
-      const todayStart = new Date();
-      todayStart.setUTCHours(0, 0, 0, 0);
+      // Use Sri Lanka timezone (UTC+5:30) for "today" boundary
+      const sriLankaOffsetMs = 5.5 * 60 * 60 * 1000;
+      const sriLankaNow = new Date(Date.now() + sriLankaOffsetMs);
+      const sriLankaMidnight = new Date(Date.UTC(
+        sriLankaNow.getUTCFullYear(),
+        sriLankaNow.getUTCMonth(),
+        sriLankaNow.getUTCDate(),
+        0, 0, 0, 0
+      ));
+      const todayStart = new Date(sriLankaMidnight.getTime() - sriLankaOffsetMs);
 
       const { data } = await supabase
         .from("transactions")
@@ -71,7 +79,7 @@ const EarnedHistory = () => {
           <h1 className="text-xl font-heading font-bold text-foreground">Today's Earnings</h1>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <CalendarCheck className="w-3 h-3" />
-            {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            {new Date(Date.now() + 5.5 * 60 * 60 * 1000).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
       </div>
@@ -118,7 +126,7 @@ const EarnedHistory = () => {
                 <p className="text-sm font-bold text-success">+Rs {Number(tx.amount).toLocaleString()}</p>
                 <Badge className={cn(
                   "text-[8px] px-1",
-                  tx.status === "approved" ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/30" : "bg-yellow-500/20 text-yellow-600"
+                  tx.status === "approved" ? "bg-success/20 text-success border-success/30" : "bg-warning/20 text-warning"
                 )}>
                   {tx.status}
                 </Badge>
