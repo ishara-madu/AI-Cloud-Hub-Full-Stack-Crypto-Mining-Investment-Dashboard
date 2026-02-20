@@ -269,7 +269,7 @@ const AdminAlerts = () => {
                                 </p>
                                 <p className="text-[10px] text-muted-foreground font-mono truncate">{userId.slice(0, 12)}…</p>
                               </div>
-                              <Link to={`/admin/users/${userId}`}>
+                              <Link to={`/admin/users/${userId}?ban_reason=${encodeURIComponent(`Fraud Alert: ${alert.title} — ${alert.description || ''}`)}`}>
                                 <Button size="sm" variant="outline" className="rounded-lg text-xs shrink-0 h-7 px-2 gap-1">
                                   <ExternalLink className="w-3 h-3" />
                                   View
