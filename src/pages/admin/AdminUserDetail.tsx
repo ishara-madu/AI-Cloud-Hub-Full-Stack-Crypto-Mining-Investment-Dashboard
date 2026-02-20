@@ -210,9 +210,24 @@ const AdminUserDetail = () => {
     const issues: string[] = [];
     if (banCount > 0) issues.push(`Banned ${banCount} time(s) — each ban reduces credit by ${banCount * 20}%`);
     if (score < 100 && banCount === 0) issues.push("Credit score may be recovering (+1/day via daily sign-in)");
-    if (score < 50) issues.push("Withdrawal handling fee significantly increased (base 5% + penalty)");
-    if (score < 80) issues.push("Daily rewards and commissions are reduced proportionally");
-    if (score === 0) issues.push("All earnings and commissions are at 0% — maximum penalty reached");
+    
+    // Withdrawal penalties
+    const feePct = 5 + ((100 - score) * 0.1);
+    const minWithdraw = 1000 + ((100 - score) * 50);
+    if (score < 100) {
+      issues.push(`Withdrawal handling fee: ${feePct.toFixed(1)}% (base 5% + ${((100 - score) * 0.1).toFixed(1)}% penalty)`);
+      issues.push(`Minimum withdrawal: Rs ${minWithdraw.toLocaleString()} (base Rs 1,000 + Rs ${((100 - score) * 50).toLocaleString()} penalty)`);
+    }
+    
+    // Earning penalties
+    if (score < 100) issues.push(`Daily rewards scaled to ${score}% (Rs ${(10 * score / 100).toFixed(1)} instead of Rs 10)`);
+    if (score < 100) issues.push(`Commissions scaled to ${score}% of normal rate`);
+    if (score < 100) issues.push(`Redeem code rewards scaled to ${score}% of base amount`);
+    if (score === 0) issues.push("⛔ All earnings, commissions, and rewards are at 0% — maximum penalty reached");
+    
+    // Team impact
+    if (banCount > 0) issues.push(`Team members' credit scores also reduced (upward & downward cascade)`);
+    
     return issues;
   };
 
@@ -388,12 +403,6 @@ const AdminUserDetail = () => {
                 <span className="text-foreground">{issue}</span>
               </div>
             ))}
-            {profile.credit_score < 100 && (
-              <div className="flex items-center gap-2 text-xs bg-muted/40 rounded-lg px-3 py-2">
-                <BarChart3 className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>Current withdrawal fee: <strong>{feePercent.toFixed(1)}%</strong> (base 5% + {((100 - profile.credit_score) * 0.1).toFixed(1)}% penalty)</span>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

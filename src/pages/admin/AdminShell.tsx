@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, ArrowDownToLine, ArrowUpFromLine,
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNotificationBell from "@/components/AdminNotificationBell";
+import { toast } from "sonner";
 
 const NAV_ITEMS = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
@@ -89,7 +90,91 @@ const SidebarContent = ({ onClose }: { onClose?: () => void }) => {
 
 const AdminShell = ({ children }: { children: React.ReactNode }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const lastScanPath = useRef<string>("");
+  const scanRunning = useRef(false);
 
+  const runAutoFraudScan = useCallback(async () => {
+    if (scanRunning.current) return;
+    scanRunning.current = true;
+    try {
+      const [{ data: logs }, { data: profilesData }] = await Promise.all([
+        supabase.from("device_logs").select("*").order("created_at", { ascending: false }).limit(1000),
+        supabase.from("profiles").select("user_id, display_name, is_frozen"),
+      ]);
+      if (!logs || logs.length === 0) { scanRunning.current = false; return; }
+
+      const profileMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
+      const newAlerts: any[] = [];
+
+      // Check IPs
+      const ipMap = new Map<string, Set<string>>();
+      logs.forEach(l => {
+        if (!l.ip_address || l.ip_address === "unknown") return;
+        if (!ipMap.has(l.ip_address)) ipMap.set(l.ip_address, new Set());
+        ipMap.get(l.ip_address)!.add(l.user_id);
+      });
+      ipMap.forEach((users, ip) => {
+        if (users.size > 1) {
+          const userIds = Array.from(users);
+          const names = userIds.map(id => (profileMap.get(id) as any)?.display_name || id.slice(0, 8)).join(", ");
+          newAlerts.push({
+            alert_type: "same_ip", severity: "warning",
+            title: `Same IP detected: ${ip}`,
+            description: `${users.size} accounts using same IP: ${names}`,
+            related_user_ids: userIds,
+          });
+        }
+      });
+
+      // Check fingerprints
+      const fpMap = new Map<string, Set<string>>();
+      logs.forEach(l => {
+        if (!l.fingerprint) return;
+        if (!fpMap.has(l.fingerprint)) fpMap.set(l.fingerprint, new Set());
+        fpMap.get(l.fingerprint)!.add(l.user_id);
+      });
+      fpMap.forEach((users, fp) => {
+        if (users.size > 1) {
+          const userIds = Array.from(users);
+          const names = userIds.map(id => (profileMap.get(id) as any)?.display_name || id.slice(0, 8)).join(", ");
+          newAlerts.push({
+            alert_type: "same_device", severity: "critical",
+            title: `Same device/browser detected`,
+            description: `${users.size} accounts on same device (fingerprint: ${fp.slice(0, 8)}): ${names}`,
+            related_user_ids: userIds,
+          });
+        }
+      });
+
+      // Insert only new alerts
+      if (newAlerts.length > 0) {
+        let inserted = 0;
+        for (const alert of newAlerts) {
+          const { data: existing } = await supabase.from("admin_alerts").select("id")
+            .eq("alert_type", alert.alert_type).eq("title", alert.title).eq("is_resolved", false).maybeSingle();
+          if (!existing) {
+            await supabase.from("admin_alerts").insert(alert);
+            inserted++;
+          }
+        }
+        if (inserted > 0) {
+          toast.warning(`🔍 Auto-scan: ${inserted} new fraud alert(s) detected`, { duration: 5000 });
+        }
+      }
+    } catch (err) {
+      console.error("Auto fraud scan error:", err);
+    }
+    scanRunning.current = false;
+  }, []);
+
+  // Run fraud scan on every admin page navigation
+  useEffect(() => {
+    if (location.pathname !== lastScanPath.current) {
+      lastScanPath.current = location.pathname;
+      runAutoFraudScan();
+    }
+  }, [location.pathname, runAutoFraudScan]);
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}

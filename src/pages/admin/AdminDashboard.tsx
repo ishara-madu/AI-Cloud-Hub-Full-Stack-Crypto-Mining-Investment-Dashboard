@@ -419,18 +419,6 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Links - Desktop Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Link to="/admin/users"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><Users className="w-4 h-4 mr-2" />Users</Button></Link>
-        <Link to="/admin/packages"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><Package className="w-4 h-4 mr-2" />Packages</Button></Link>
-        <Link to="/admin/deposits"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><ArrowDownToLine className="w-4 h-4 mr-2" />Deposits</Button></Link>
-        <Link to="/admin/withdrawals"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><ArrowUpFromLine className="w-4 h-4 mr-2" />Withdrawals</Button></Link>
-        <Link to="/admin/redeem-codes"><Button variant="outline" className="w-full h-14 rounded-xl text-sm">🎫 Redeem Codes</Button></Link>
-        <Link to="/admin/sliders"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><ImageIcon className="w-4 h-4 mr-2" />Sliders</Button></Link>
-        <Link to="/admin/user-packages"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><Package className="w-4 h-4 mr-2" />User Pkgs</Button></Link>
-        <Link to="/admin/settings"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><Settings className="w-4 h-4 mr-2" />Settings</Button></Link>
-        <Link to="/admin/alerts"><Button variant="outline" className="w-full h-14 rounded-xl text-sm"><ShieldAlert className="w-4 h-4 mr-2" />Alerts</Button></Link>
-      </div>
     </div>
   );
 };
