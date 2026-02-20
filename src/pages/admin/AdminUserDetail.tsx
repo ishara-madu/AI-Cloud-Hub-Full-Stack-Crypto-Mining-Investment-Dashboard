@@ -792,14 +792,22 @@ const AdminUserDetail = () => {
                       <span className="font-semibold">{pkg.expires_at ? new Date(pkg.expires_at).toLocaleDateString() : "Never"}</span>
                     </div>
                   </div>
-                  {pkg.is_active && pkg.expires_at && (
-                    <div className="bg-yellow-500/10 rounded-lg px-2 py-1.5 text-xs flex items-center gap-1.5">
-                      <Clock className="w-3 h-3 text-yellow-500" />
-                      <span className="text-yellow-600">
-                        {Math.max(0, Math.ceil((new Date(pkg.expires_at).getTime() - Date.now()) / 86400000))} days remaining
-                      </span>
-                    </div>
-                  )}
+                  {pkg.is_active && (() => {
+                    const remainingDays = pkg.expires_at
+                      ? Math.max(0, Math.ceil((new Date(pkg.expires_at).getTime() - Date.now()) / 86400000))
+                      : null;
+                    const isExpired = remainingDays !== null && remainingDays === 0;
+                    return (
+                      <div className={`${isExpired ? "bg-destructive/10" : "bg-yellow-500/10"} rounded-lg px-2 py-1.5 text-xs flex items-center gap-1.5`}>
+                        <Clock className={`w-3 h-3 ${isExpired ? "text-destructive" : "text-yellow-500"}`} />
+                        <span className={isExpired ? "text-destructive" : "text-yellow-600"}>
+                          {remainingDays !== null
+                            ? isExpired ? "Expired" : `${remainingDays} days remaining`
+                            : "No expiry set"}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             ))

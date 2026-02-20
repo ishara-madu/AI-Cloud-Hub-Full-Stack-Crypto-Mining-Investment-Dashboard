@@ -119,8 +119,6 @@ const Settings = () => {
   const creditLabel = creditScore >= 80 ? "Excellent" : creditScore >= 50 ? "Good" : creditScore >= 30 ? "Fair" : "Poor";
   const creditColor = creditScore >= 80 ? "text-emerald-500" : creditScore >= 50 ? "text-yellow-500" : "text-destructive";
 
-  const now = new Date();
-  const serverTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
   const gridItems = [
     { label: "Bank Info", icon: CreditCard, key: "bank", action: () => navigate("/bank-info") },
@@ -272,10 +270,6 @@ const Settings = () => {
           Log Out
         </Button>
 
-        <div className="text-center space-y-1 pt-2 pb-4">
-          <p className="text-[10px] text-muted-foreground">Version 1.4.2 (Build 2026)</p>
-          <p className="text-[10px] text-muted-foreground">Server Time: {serverTime}</p>
-        </div>
       </div>
     </div>
   );
