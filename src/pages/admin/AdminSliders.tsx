@@ -19,7 +19,7 @@ const gradientOptions = [
   "from-rose-500 via-red-500 to-amber-500",
 ];
 
-const emptyForm = { title: "", subtitle: "", gradient: gradientOptions[0], sort_order: "0", link_url: "", offer_text: "", offer_expires_at: "" };
+const emptyForm = { title: "", subtitle: "", gradient: gradientOptions[0], sort_order: "0", link_url: "" };
 
 const AdminSliders = () => {
   const [banners, setBanners] = useState<any[]>([]);
@@ -69,8 +69,6 @@ const AdminSliders = () => {
       sort_order: parseInt(form.sort_order) || 0,
       image_url: imageUrl,
       link_url: form.link_url.trim() || null,
-      offer_text: form.offer_text.trim() || null,
-      offer_expires_at: form.offer_expires_at || null,
     });
     setSaving(false);
     if (error) { toast.error("Failed to add banner"); return; }
@@ -85,7 +83,7 @@ const AdminSliders = () => {
   const startEdit = (b: any) => {
     setEditingId(b.id);
     setShowAdd(false);
-    setForm({ title: b.title || "", subtitle: b.subtitle || "", gradient: b.gradient || gradientOptions[0], sort_order: b.sort_order?.toString() || "0", link_url: b.link_url || "", offer_text: b.offer_text || "", offer_expires_at: b.offer_expires_at ? b.offer_expires_at.split("T")[0] : "" });
+    setForm({ title: b.title || "", subtitle: b.subtitle || "", gradient: b.gradient || gradientOptions[0], sort_order: b.sort_order?.toString() || "0", link_url: b.link_url || "" });
     setImageFile(null);
     setImagePreview(b.image_url || null);
   };
@@ -105,8 +103,6 @@ const AdminSliders = () => {
       gradient: form.gradient,
       sort_order: parseInt(form.sort_order) || 0,
       link_url: form.link_url.trim() || null,
-      offer_text: form.offer_text.trim() || null,
-      offer_expires_at: form.offer_expires_at || null,
     };
     if (imageUrl !== undefined) updateData.image_url = imageUrl;
 
@@ -231,7 +227,7 @@ const AdminSliders = () => {
                 )}
                 <CardContent className="p-3 flex items-center justify-between">
                   <div className="text-xs text-muted-foreground">
-                    Order: {b.sort_order} {b.image_url && "• 🖼"} {b.link_url && "• 🔗"} {b.offer_text && "• 🏷️"}
+                    Order: {b.sort_order} {b.image_url && "• 🖼"} {b.link_url && "• 🔗"}
                   </div>
                   <div className="flex items-center gap-1">
                     <Switch checked={b.is_active} onCheckedChange={() => handleToggle(b.id, b.is_active)} />
