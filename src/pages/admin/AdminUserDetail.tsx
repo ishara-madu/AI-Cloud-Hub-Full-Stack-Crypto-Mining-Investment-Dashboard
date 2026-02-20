@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -122,6 +122,7 @@ const formatTimeRemaining = (expiryIso: string): string => {
 
 const AdminUserDetail = () => {
   const { userId } = useParams<{ userId: string }>();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserDetail | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
@@ -135,7 +136,10 @@ const AdminUserDetail = () => {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referrerName, setReferrerName] = useState<string | null>(null);
   const [banDuration, setBanDuration] = useState<string>("");
-  const [banReason, setBanReason] = useState("");
+  const [banReason, setBanReason] = useState(() => {
+    const alertReason = searchParams.get("ban_reason");
+    return alertReason ? decodeURIComponent(alertReason) : "";
+  });
   const [banning, setBanning] = useState(false);
   const [ticker, setTicker] = useState(0);
 
