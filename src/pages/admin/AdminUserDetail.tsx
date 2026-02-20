@@ -645,19 +645,30 @@ const AdminUserDetail = () => {
                 <p className="text-xs text-muted-foreground text-center py-4">No active packages</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {userPackages.filter(p => p.is_active).map(pkg => (
-                    <div key={pkg.id} className="bg-muted/30 rounded-xl px-3 py-2.5 flex items-center justify-between text-xs">
-                      <div>
-                        <p className="font-semibold text-foreground">{pkg.package_name || "Package"}</p>
-                        <p className="text-muted-foreground">Paid: Rs {pkg.price_paid.toLocaleString()}</p>
-                        {pkg.expires_at && <p className="text-muted-foreground">Expires: {new Date(pkg.expires_at).toLocaleDateString()}</p>}
+                  {userPackages.filter(p => p.is_active).map(pkg => {
+                    const daysRemaining = pkg.expires_at
+                      ? Math.max(0, Math.ceil((new Date(pkg.expires_at).getTime() - Date.now()) / 86400000))
+                      : null;
+                    return (
+                      <div key={pkg.id} className="bg-muted/30 rounded-xl px-3 py-2.5 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-semibold text-foreground">{pkg.package_name || "Package"}</p>
+                          <p className="text-muted-foreground">Paid: Rs {pkg.price_paid.toLocaleString()}</p>
+                          {pkg.expires_at && (
+                            <p className="text-muted-foreground">
+                              {daysRemaining !== null && daysRemaining > 0
+                                ? `${daysRemaining}d remaining`
+                                : daysRemaining === 0 ? "Expired" : "No expiry"}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-emerald-500 font-bold">+Rs {(pkg.price_paid * 0.05).toFixed(0)}/day</p>
+                          <Badge className="bg-emerald-500/15 text-emerald-600 text-[9px]">Active</Badge>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-emerald-500 font-bold">+Rs {(pkg.price_paid * 0.05).toFixed(0)}/day</p>
-                        <Badge className="bg-emerald-500/15 text-emerald-600 text-[9px]">Active</Badge>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
