@@ -23,7 +23,7 @@ const Redeem = () => {
     if (!user) return;
     setLoading(true);
 
-    const { data, error } = await supabase.rpc("redeem_promo_code", { p_code: code.trim() });
+    const { data, error } = await supabase.rpc("redeem_promo_code" as any, { p_code: code.trim() });
 
     if (error) {
       toast.error("Failed to redeem code. Please try again.");
