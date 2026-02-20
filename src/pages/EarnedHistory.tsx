@@ -19,6 +19,7 @@ interface Transaction {
 
 const typeIcon = (type: string, description: string | null) => {
   if (type === "commission" && description?.toLowerCase().includes("daily package")) return <Package className="w-4 h-4 text-primary" />;
+  if (type === "commission" && description?.toLowerCase().includes("sign-in")) return <CalendarCheck className="w-4 h-4 text-warning" />;
   if (type === "commission") return <Users className="w-4 h-4 text-success" />;
   if (type === "refund") return <Gift className="w-4 h-4 text-primary" />;
   return <TrendingUp className="w-4 h-4 text-muted-foreground" />;
@@ -26,6 +27,7 @@ const typeIcon = (type: string, description: string | null) => {
 
 const typeLabel = (type: string, description: string | null) => {
   if (type === "commission" && description?.toLowerCase().includes("daily package")) return "Package Income";
+  if (type === "commission" && description?.toLowerCase().includes("sign-in")) return "Sign-in Reward";
   if (type === "commission") return "Referral Commission";
   if (type === "refund") return "Cashback";
   return "Earned";
