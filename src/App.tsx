@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
+import VpnGuard from "@/components/VpnGuard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -55,6 +56,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner closeButton />
+      <VpnGuard>
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -95,6 +97,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </AuthProvider>
+      </VpnGuard>
     </TooltipProvider>
   </QueryClientProvider>
 );
