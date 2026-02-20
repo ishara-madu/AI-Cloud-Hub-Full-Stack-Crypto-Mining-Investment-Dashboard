@@ -5,8 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, ArrowLeft, Building2, Copy, Camera, Upload, X } from "lucide-react";
+import { Loader2, CheckCircle2, ArrowLeft, Building2, Copy, Camera, Upload, X, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  enabled: boolean;
+  description: string;
+  details?: Record<string, string>;
+}
+
+const iconMap: Record<string, any> = {
+  building: Building2,
+  smartphone: Smartphone,
+};
 
 const Deposit = () => {
   const { user } = useAuth();
@@ -18,16 +33,26 @@ const Deposit = () => {
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [bankDetails, setBankDetails] = useState({ bank_name: "Commercial Bank PLC", account_name: "AI Cloud Technologies", account_number: "82001567XX", branch: "Colombo 07" });
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [selectedMethod, setSelectedMethod] = useState<string>("bank_transfer");
 
   useEffect(() => {
-    supabase.from("platform_settings").select("value").eq("key", "deposit_bank").maybeSingle().then(({ data }) => {
-      if (data?.value) setBankDetails(data.value as any);
+    Promise.all([
+      supabase.from("platform_settings").select("value").eq("key", "deposit_bank").maybeSingle(),
+      supabase.from("platform_settings").select("value").eq("key", "payment_methods").maybeSingle(),
+    ]).then(([bankRes, methodsRes]) => {
+      if (bankRes.data?.value) setBankDetails(bankRes.data.value as any);
+      if (methodsRes.data?.value) {
+        const methods = (methodsRes.data.value as any[]).filter((m: PaymentMethod) => m.enabled);
+        setPaymentMethods(methods);
+        if (methods.length > 0) setSelectedMethod(methods[0].id);
+      }
     });
   }, []);
 
-  const copyAccount = () => {
-    navigator.clipboard.writeText(bankDetails.account_number);
-    toast.success("Account number copied!");
+  const copyText = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied!`);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,26 +83,29 @@ const Deposit = () => {
     }
 
     const { data: depData, error: depErr } = await supabase.from("deposit_requests").insert({
-      user_id: user.id, amount: amt, payment_method: "bank_transfer" as const,
+      user_id: user.id, amount: amt, payment_method: selectedMethod as any,
       notes: reference.trim() || null, slip_url: slipUrl,
     }).select("id").single();
 
     if (!depErr && depData) {
+      const methodName = paymentMethods.find(m => m.id === selectedMethod)?.name || selectedMethod;
       await supabase.from("transactions").insert({
         user_id: user.id, type: "deposit" as const, amount: amt, status: "pending" as const,
-        description: `Deposit via Bank Transfer${reference ? ` - ${reference}` : ""}`,
+        description: `Deposit via ${methodName}${reference ? ` - ${reference}` : ""}`,
         reference_id: depData.id,
       });
       await supabase.from("notifications").insert({
         user_id: user.id, type: "money",
         title: "Deposit Request Submitted",
-        description: `Your deposit of Rs ${amt.toLocaleString()} via bank transfer is pending approval.`,
+        description: `Your deposit of Rs ${amt.toLocaleString()} via ${methodName} is pending approval.`,
       });
     }
 
     setLoading(false);
     if (depErr) { toast.error("Failed to submit deposit request"); } else { setSubmitted(true); }
   };
+
+  const activeMethod = paymentMethods.find(m => m.id === selectedMethod);
 
   if (submitted) {
     return (
@@ -104,35 +132,75 @@ const Deposit = () => {
       </div>
 
       <div className="px-4 space-y-5 pb-8">
+        {/* Payment Method Selection */}
         <div>
           <p className="text-sm font-medium text-muted-foreground mb-2">Select Method</p>
-          <div className="shadow-neu rounded-2xl bg-card p-4 flex items-center gap-4 ring-2 ring-primary">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <p className="font-heading font-bold text-foreground">Bank Transfer</p>
-              <p className="text-xs text-muted-foreground">Manual transfer to our account</p>
-            </div>
-            <CheckCircle2 className="w-5 h-5 text-primary ml-auto" />
+          <div className="space-y-2">
+            {paymentMethods.map((method) => {
+              const IconComp = iconMap[method.icon] || Building2;
+              const isSelected = selectedMethod === method.id;
+              return (
+                <button
+                  key={method.id}
+                  type="button"
+                  onClick={() => setSelectedMethod(method.id)}
+                  className={cn(
+                    "w-full shadow-neu rounded-2xl bg-card p-4 flex items-center gap-4 transition-all text-left",
+                    isSelected ? "ring-2 ring-primary" : "ring-1 ring-border hover:ring-primary/40"
+                  )}
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center",
+                    isSelected ? "gradient-primary" : "bg-muted"
+                  )}>
+                    <IconComp className={cn("w-6 h-6", isSelected ? "text-primary-foreground" : "text-muted-foreground")} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-heading font-bold text-foreground">{method.name}</p>
+                    <p className="text-xs text-muted-foreground">{method.description}</p>
+                  </div>
+                  {isSelected && <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="shadow-neu rounded-2xl bg-card p-5 space-y-3">
-          <h3 className="text-sm font-heading font-bold text-foreground">Receiving Bank Details</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Bank</span><span className="font-medium text-foreground">{bankDetails.bank_name}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">A/C Name</span><span className="font-medium text-foreground">{bankDetails.account_name}</span></div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">A/C No</span>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground font-mono">{bankDetails.account_number}</span>
-                <button onClick={copyAccount} className="text-primary hover:text-primary/80"><Copy className="w-4 h-4" /></button>
+        {/* Payment Details */}
+        {selectedMethod === "bank_transfer" && (
+          <div className="shadow-neu rounded-2xl bg-card p-5 space-y-3">
+            <h3 className="text-sm font-heading font-bold text-foreground">Receiving Bank Details</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Bank</span><span className="font-medium text-foreground">{bankDetails.bank_name}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">A/C Name</span><span className="font-medium text-foreground">{bankDetails.account_name}</span></div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">A/C No</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground font-mono">{bankDetails.account_number}</span>
+                  <button onClick={() => copyText(bankDetails.account_number, "Account number")} className="text-primary hover:text-primary/80"><Copy className="w-4 h-4" /></button>
+                </div>
               </div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Branch</span><span className="font-medium text-foreground">{bankDetails.branch}</span></div>
             </div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Branch</span><span className="font-medium text-foreground">{bankDetails.branch}</span></div>
           </div>
-        </div>
+        )}
+
+        {selectedMethod !== "bank_transfer" && activeMethod?.details && (
+          <div className="shadow-neu rounded-2xl bg-card p-5 space-y-3">
+            <h3 className="text-sm font-heading font-bold text-foreground">{activeMethod.name} Details</h3>
+            <div className="space-y-2 text-sm">
+              {Object.entries(activeMethod.details).map(([key, value]) => (
+                <div key={key} className="flex justify-between items-center">
+                  <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground font-mono">{value}</span>
+                    <button onClick={() => copyText(value, key)} className="text-primary hover:text-primary/80"><Copy className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

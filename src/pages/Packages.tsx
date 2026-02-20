@@ -231,8 +231,11 @@ const Packages = () => {
                 const totalDays = up.expires_at
                   ? Math.ceil((new Date(up.expires_at).getTime() - new Date(up.purchased_at).getTime()) / 86400000)
                   : 30;
+                // Use Sri Lanka time for day calculations
+                const sriLankaNowMs = Date.now() + 5.5 * 60 * 60 * 1000;
+                const purchasedMs = new Date(up.purchased_at).getTime() + 5.5 * 60 * 60 * 1000;
                 const daysElapsed = Math.min(
-                  Math.ceil((Date.now() - new Date(up.purchased_at).getTime()) / 86400000),
+                  Math.ceil((sriLankaNowMs - purchasedMs) / 86400000),
                   totalDays
                 );
                 const daysRemaining = Math.max(totalDays - daysElapsed, 0);
