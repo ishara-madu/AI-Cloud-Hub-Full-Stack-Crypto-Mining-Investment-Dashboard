@@ -23,7 +23,10 @@ const Withdraw = () => {
   const [submitted, setSubmitted] = useState(false);
   const [hasActivePackage, setHasActivePackage] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
+  const [creditScore, setCreditScore] = useState(100);
   const hasMinDeposit = totalDeposited >= 500;
+  const feePercent = 5 + ((100 - creditScore) * 0.1);
+  const minWithdrawal = 1000 + ((100 - creditScore) * 50);
 
   useEffect(() => {
     if (!user) return;
@@ -32,7 +35,7 @@ const Withdraw = () => {
         supabase.from("wallets").select("balance, total_deposited").eq("user_id", user.id).maybeSingle(),
         supabase.from("bank_accounts").select("id, bank_name, account_number").eq("user_id", user.id).eq("is_default", true).maybeSingle(),
         supabase.from("user_packages").select("id").eq("user_id", user.id).eq("is_active", true).limit(1),
-        supabase.from("profiles").select("is_frozen").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles").select("is_frozen, credit_score").eq("user_id", user.id).maybeSingle(),
       ]);
       setBalance(walletRes.data?.balance ? Number(walletRes.data.balance) : 0);
       setTotalDeposited(walletRes.data?.total_deposited ? Number(walletRes.data.total_deposited) : 0);
@@ -44,6 +47,7 @@ const Withdraw = () => {
       }
       setHasActivePackage((pkgRes.data || []).length > 0);
       setIsFrozen(profileRes.data?.is_frozen || false);
+      setCreditScore(profileRes.data?.credit_score ?? 100);
       setDataLoading(false);
     };
     fetchData();
@@ -56,7 +60,7 @@ const Withdraw = () => {
     if (!hasMinDeposit) { toast.error("You must deposit at least Rs 500 before withdrawing."); return; }
     if (!hasBankDetails) { toast.error("Please save your bank details first."); return; }
     const amt = parseFloat(amount);
-    if (!amt || amt < 1000) { toast.error("Minimum withdrawal: Rs 1,000"); return; }
+    if (!amt || amt < minWithdrawal) { toast.error(`Minimum withdrawal: Rs ${minWithdrawal.toLocaleString()}`); return; }
     if (amt > balance) { toast.error("Insufficient balance"); return; }
     if (!user) return;
     setLoading(true);
@@ -91,7 +95,7 @@ const Withdraw = () => {
     );
   }
 
-  const fee = parseFloat(amount) > 0 ? (parseFloat(amount) * 0.05) : 0;
+  const fee = parseFloat(amount) > 0 ? (parseFloat(amount) * feePercent / 100) : 0;
 
   return (
     <div className="animate-fade-in">
@@ -180,7 +184,7 @@ const Withdraw = () => {
               <Label className="text-sm font-medium">Withdrawal Amount (Rs)</Label>
               <Input
                 type="number"
-                min="1000"
+                min={minWithdrawal}
                 step="0.01"
                 placeholder="0.00"
                 className="rounded-xl h-12 text-lg shadow-neu-inset bg-muted/30"
@@ -193,8 +197,16 @@ const Withdraw = () => {
 
           {/* Fee info */}
           <div className="text-xs text-muted-foreground space-y-1 px-1">
-            <p>Handling fee: 5%{fee > 0 && <span className="text-foreground font-medium"> (Rs {fee.toFixed(2)})</span>}</p>
-            <p>Minimum withdrawal: Rs 1,000</p>
+            <p>Handling fee: {feePercent.toFixed(1)}%{fee > 0 && <span className="text-foreground font-medium"> (Rs {fee.toFixed(2)})</span>}</p>
+            <p>Minimum withdrawal: Rs {minWithdrawal.toLocaleString()}</p>
+            {creditScore < 100 && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mt-2">
+                <p className="text-yellow-600 font-medium text-xs">⚠️ Credit Score Penalty ({creditScore}%)</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Fee increased by {((100 - creditScore) * 0.1).toFixed(1)}% and minimum withdrawal raised by Rs {((100 - creditScore) * 50).toLocaleString()} due to low credit score.
+                </p>
+              </div>
+            )}
           </div>
 
           <Button

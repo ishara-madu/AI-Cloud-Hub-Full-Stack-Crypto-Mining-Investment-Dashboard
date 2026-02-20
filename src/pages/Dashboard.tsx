@@ -172,53 +172,22 @@ const Dashboard = () => {
 
   // Fetch real activity data for marquee and live withdrawals
   const fetchRealActivityData = useCallback(async () => {
-    const [withdrawalsRes, depositsRes, commissionsRes] = await Promise.all([
-      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "withdrawal").eq("status", "approved").order("created_at", { ascending: false }).limit(20),
-      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "deposit").eq("status", "approved").order("created_at", { ascending: false }).limit(15),
-      supabase.from("transactions").select("amount, user_id, created_at").eq("type", "commission").eq("status", "approved").order("created_at", { ascending: false }).limit(15),
-    ]);
+    const { data: activityData } = await supabase.rpc("get_recent_activity");
+    
+    const allActivity = (activityData || []).map((a: any) => ({
+      user: a.display_name || "use***@gmail.com",
+      amount: Number(a.amount),
+      type: a.type,
+      created_at: a.created_at,
+    }));
 
-    const withdrawals = withdrawalsRes.data || [];
-    const deposits = depositsRes.data || [];
-    const commissions = commissionsRes.data || [];
-
-    const allUserIds = [...new Set([
-      ...withdrawals.map((w: any) => w.user_id),
-      ...deposits.map((d: any) => d.user_id),
-      ...commissions.map((c: any) => c.user_id),
-    ])];
-
-    const profileEmailMap = new Map<string, string>();
-    if (allUserIds.length > 0) {
-      const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", allUserIds);
-      (profiles || []).forEach((p: any) => {
-        const name = (p.display_name || "user").toLowerCase().replace(/\s+/g, "");
-        profileEmailMap.set(p.user_id, name.slice(0, 3) + "***@gmail.com");
-      });
-    }
-
-    type ActivityItem = { user: string; amount: number; type: string; created_at: string };
-    const allActivity: ActivityItem[] = [];
-
-    withdrawals.forEach((w: any) => {
-      allActivity.push({ user: profileEmailMap.get(w.user_id) || "use***@gmail.com", amount: Number(w.amount), type: "withdrawal", created_at: w.created_at });
-    });
-    deposits.forEach((d: any) => {
-      allActivity.push({ user: profileEmailMap.get(d.user_id) || "use***@gmail.com", amount: Number(d.amount), type: "deposit", created_at: d.created_at });
-    });
-    commissions.forEach((c: any) => {
-      allActivity.push({ user: profileEmailMap.get(c.user_id) || "use***@gmail.com", amount: Number(c.amount), type: "commission", created_at: c.created_at });
-    });
-
-    allActivity.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-    // Live Withdrawals feed — no animation on initial load
-    const withdrawalPayouts = allActivity.filter(a => a.type === "withdrawal").slice(0, 15).map((a, i) => ({ ...a, key: i, isNew: false }));
+    // Live Withdrawals feed
+    const withdrawalPayouts = allActivity.filter((a: any) => a.type === "withdrawal").slice(0, 15).map((a: any, i: number) => ({ ...a, key: i, isNew: false }));
     if (withdrawalPayouts.length > 0) {
       setLivePayouts(withdrawalPayouts);
     }
 
-    const buildMsg = (item: ActivityItem) => {
+    const buildMsg = (item: any) => {
       if (item.type === "withdrawal") return `${item.user} withdrew Rs.${item.amount.toLocaleString()} successfully ✅`;
       if (item.type === "deposit") return `${item.user} deposited Rs.${item.amount.toLocaleString()} via bank transfer`;
       return `${item.user} earned Rs.${item.amount.toLocaleString()} commission 🎉`;
@@ -229,7 +198,6 @@ const Dashboard = () => {
       setMarqueeMsg(buildMsg(allActivity[startIdx]));
       setMarqueeKey(k => k + 1);
 
-      // Rotate messages, repeating the last alert when only 1 item
       let idx = startIdx;
       const schedule = (): ReturnType<typeof setTimeout> => {
         const delay = 12000 + Math.random() * 6000;
