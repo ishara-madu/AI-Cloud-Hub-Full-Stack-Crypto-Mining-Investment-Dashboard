@@ -152,8 +152,8 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
         let inserted = 0;
         for (const alert of newAlerts) {
           const { data: existing } = await supabase.from("admin_alerts").select("id")
-            .eq("alert_type", alert.alert_type).eq("title", alert.title).maybeSingle();
-          if (!existing) {
+            .eq("alert_type", alert.alert_type).eq("title", alert.title).limit(1);
+          if (!existing || existing.length === 0) {
             await supabase.from("admin_alerts").insert(alert);
             inserted++;
           }

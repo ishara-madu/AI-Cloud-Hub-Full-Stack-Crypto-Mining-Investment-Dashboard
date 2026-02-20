@@ -115,8 +115,8 @@ const AdminAlerts = () => {
     if (newAlerts.length > 0) {
       for (const alert of newAlerts) {
         const { data: existing } = await supabase.from("admin_alerts").select("id")
-          .eq("alert_type", alert.alert_type).eq("title", alert.title).maybeSingle();
-        if (!existing) {
+          .eq("alert_type", alert.alert_type).eq("title", alert.title).limit(1);
+        if (!existing || existing.length === 0) {
           await supabase.from("admin_alerts").insert(alert);
         }
       }
@@ -130,15 +130,9 @@ const AdminAlerts = () => {
 
   const handleResolve = async (id: string) => {
     setProcessing(id);
-    // Get alert details to find related user device logs
-    const alert = alerts.find(a => a.id === id);
-    // Delete alert from database
+    // Delete alert from database (device logs kept as audit trail)
     await supabase.from("admin_alerts").delete().eq("id", id);
-    // Delete related device logs so the scan won't re-detect the same pattern
-    if (alert?.related_user_ids?.length > 0) {
-      await supabase.from("device_logs").delete().in("user_id", alert.related_user_ids);
-    }
-    toast.success("Alert resolved & device logs cleared");
+    toast.success("Alert resolved");
     setProcessing(null);
     setExpandedId(null);
     fetchAlerts();
