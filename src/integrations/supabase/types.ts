@@ -664,14 +664,30 @@ export type Database = {
       admin_reset_all_data: { Args: never; Returns: Json }
       approve_deposit: { Args: { p_deposit_id: string }; Returns: Json }
       ban_user:
-        | { Args: { p_user_id: string }; Returns: Json }
         | {
             Args: { p_duration_hours?: number; p_user_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_duration_hours?: number
+              p_reason?: string
+              p_user_id: string
+            }
             Returns: Json
           }
       claim_package_daily_income: { Args: never; Returns: Json }
       daily_checkin: { Args: never; Returns: Json }
       generate_referral_code: { Args: never; Returns: string }
+      get_recent_activity: {
+        Args: never
+        Returns: {
+          amount: number
+          created_at: string
+          display_name: string
+          type: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

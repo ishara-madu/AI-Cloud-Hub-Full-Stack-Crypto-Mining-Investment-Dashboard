@@ -135,6 +135,7 @@ const AdminUserDetail = () => {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referrerName, setReferrerName] = useState<string | null>(null);
   const [banDuration, setBanDuration] = useState<string>("");
+  const [banReason, setBanReason] = useState("");
   const [banning, setBanning] = useState(false);
   const [ticker, setTicker] = useState(0);
 
@@ -222,6 +223,7 @@ const AdminUserDetail = () => {
     const { data, error } = await supabase.rpc("ban_user", {
       p_user_id: userId,
       p_duration_hours: hours,
+      p_reason: banReason || null,
     } as any);
     if (error || !(data as any)?.success) {
       toast.error((data as any)?.error || error?.message || "Ban failed");
@@ -453,6 +455,35 @@ const AdminUserDetail = () => {
                   Permanent
                 </button>
               </div>
+
+              {/* Ban Reason */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ban Reason (optional)</Label>
+                <textarea
+                  className="flex min-h-[60px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  placeholder="Enter reason for banning..."
+                  value={banReason}
+                  onChange={e => setBanReason(e.target.value)}
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "Suspicious activity detected",
+                    "Multiple account violation",
+                    "Fraudulent transaction",
+                    "Terms of service violation",
+                    "Spam or abuse",
+                  ].map(reason => (
+                    <button
+                      key={reason}
+                      onClick={() => setBanReason(reason)}
+                      className={`text-[10px] px-2 py-1 rounded-lg border transition-colors ${banReason === reason ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-foreground"}`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Button onClick={handleBan} variant="destructive" className="w-full rounded-xl" disabled={banning}>
                 <Ban className="w-4 h-4 mr-2" />
                 {banDuration ? `Temp Ban (${banDuration}h)` : "Permanent Ban"} — Ban #{profile.ban_count + 1}

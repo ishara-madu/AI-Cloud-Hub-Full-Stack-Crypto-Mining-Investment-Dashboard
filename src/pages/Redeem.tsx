@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,14 @@ const Redeem = () => {
   const { user } = useAuth();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [creditScore, setCreditScore] = useState(100);
+
+  // Fetch credit score on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("credit_score").eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => setCreditScore(data?.credit_score ?? 100));
+  }, [user]);
 
   const handleRedeem = async () => {
     if (!code.trim()) { toast.error("Please enter a promo code"); return; }
@@ -63,10 +71,15 @@ const Redeem = () => {
       return;
     }
 
+    // Scale reward by credit score
+    const baseReward = Number(codeData.reward_amount);
+    const scaledReward = Math.round(baseReward * creditScore / 100 * 100) / 100;
+    const actualReward = Math.max(scaledReward, 1); // minimum 1
+
     // Redeem: add to wallet, track usage
     const { data: wallet } = await supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle();
     if (wallet) {
-      await supabase.from("wallets").update({ balance: Number(wallet.balance) + Number(codeData.reward_amount) }).eq("user_id", user.id);
+      await supabase.from("wallets").update({ balance: Number(wallet.balance) + actualReward }).eq("user_id", user.id);
     }
 
     await supabase.from("redeem_code_uses").insert({ code_id: codeData.id, user_id: user.id });
@@ -74,18 +87,18 @@ const Redeem = () => {
 
     // Create transaction
     await supabase.from("transactions").insert({
-      user_id: user.id, type: "deposit" as const, amount: Number(codeData.reward_amount),
-      status: "approved" as const, description: `Redeemed promo code: ${codeData.code}`,
+      user_id: user.id, type: "deposit" as const, amount: actualReward,
+      status: "approved" as const, description: `Redeemed promo code: ${codeData.code}${creditScore < 100 ? ` (scaled by ${creditScore}% credit)` : ""}`,
     });
 
     // Create notification
     await supabase.from("notifications").insert({
       user_id: user.id, type: "promo",
       title: "Promo Code Redeemed!",
-      description: `You received Rs ${Number(codeData.reward_amount).toLocaleString()} from promo code ${codeData.code}.`,
+      description: `You received Rs ${actualReward.toLocaleString()} from promo code ${codeData.code}.${creditScore < 100 ? ` (Reduced from Rs ${baseReward.toLocaleString()} due to ${creditScore}% credit score)` : ""}`,
     });
 
-    toast.success(`Rs ${Number(codeData.reward_amount).toLocaleString()} added to your wallet!`);
+    toast.success(`Rs ${actualReward.toLocaleString()} added to your wallet!${creditScore < 100 ? ` (${creditScore}% credit score applied)` : ""}`);
     setCode("");
     setLoading(false);
   };
@@ -128,6 +141,12 @@ const Redeem = () => {
 
       {/* Info */}
       <div className="shadow-neu rounded-2xl bg-card p-4 text-center space-y-1">
+        {creditScore < 100 && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mb-2">
+            <p className="text-yellow-600 font-medium text-xs">⚠️ Credit Score: {creditScore}%</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Your rewards are scaled to {creditScore}% of the original value.</p>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">📋 Promo codes are case-insensitive and single-use per user.</p>
         <p className="text-[10px] text-muted-foreground">Contact support if you experience any issues.</p>
       </div>
