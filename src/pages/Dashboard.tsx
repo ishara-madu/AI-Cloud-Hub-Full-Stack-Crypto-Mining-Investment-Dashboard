@@ -491,7 +491,8 @@ const Dashboard = () => {
                   Math.ceil((sriLankaNowMs - purchasedMs) / 86400000),
                   totalDays
                 );
-                const daysRemaining = Math.max(totalDays - daysElapsed, 0);
+                // Subtract 1 because first-day income is credited at purchase
+                const daysRemaining = Math.max(totalDays - daysElapsed - 1, 0);
                 const progressPct = Math.round((daysElapsed / totalDays) * 100);
 
                 return (
