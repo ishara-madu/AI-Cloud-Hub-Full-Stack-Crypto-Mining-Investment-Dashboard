@@ -76,19 +76,44 @@ const Redeem = () => {
     const scaledReward = Math.round(baseReward * creditScore / 100 * 100) / 100;
     const actualReward = Math.max(scaledReward, 1); // minimum 1
 
-    // Redeem: add to wallet, track usage
-    const { data: wallet } = await supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle();
-    if (wallet) {
-      await supabase.from("wallets").update({ balance: Number(wallet.balance) + actualReward }).eq("user_id", user.id);
+    // Get wallet balance BEFORE update for verification
+    const { data: walletBefore } = await supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle();
+    const balBefore = Number(walletBefore?.balance ?? 0);
+
+    // Credit wallet
+    const { error: walletError } = await supabase.from("wallets")
+      .update({ balance: balBefore + actualReward })
+      .eq("user_id", user.id);
+
+    if (walletError) {
+      toast.error("Failed to credit wallet. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // Verify balance was actually updated
+    const { data: walletAfter } = await supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle();
+    const balAfter = Number(walletAfter?.balance ?? 0);
+
+    if (Math.abs(balAfter - (balBefore + actualReward)) > 0.01) {
+      // Balance mismatch - log alert for admin
+      await supabase.from("admin_alerts").insert({
+        alert_type: "integrity_error",
+        severity: "critical",
+        title: "⚠️ Balance Mismatch on Redeem Code",
+        description: `User redeemed code ${codeData.code}. Before: Rs ${balBefore}, Reward: Rs ${actualReward}, Expected: Rs ${balBefore + actualReward}, Actual: Rs ${balAfter}`,
+        related_user_ids: [user.id],
+      });
     }
 
     await supabase.from("redeem_code_uses").insert({ code_id: codeData.id, user_id: user.id });
     await supabase.from("redeem_codes").update({ current_uses: codeData.current_uses + 1 }).eq("id", codeData.id);
 
-    // Create transaction
+    // Create transaction as 'refund' type so it shows in Today's Earnings
     await supabase.from("transactions").insert({
-      user_id: user.id, type: "deposit" as const, amount: actualReward,
-      status: "approved" as const, description: `Redeemed promo code: ${codeData.code}${creditScore < 100 ? ` (scaled by ${creditScore}% credit)` : ""}`,
+      user_id: user.id, type: "refund" as const, amount: actualReward,
+      status: "approved" as const,
+      description: `Redeemed promo code: ${codeData.code}${creditScore < 100 ? ` (scaled by ${creditScore}% credit)` : ""}`,
     });
 
     // Create notification

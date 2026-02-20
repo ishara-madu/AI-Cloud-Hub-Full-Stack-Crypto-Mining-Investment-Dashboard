@@ -160,14 +160,14 @@ const Dashboard = () => {
   const refreshTodayStats = useCallback(async () => {
     if (!user) return;
     const todayStart = getSriLankaDayStart();
-    const [todayIncomeRes, todayAllCommRes] = await Promise.all([
+    const [todayIncomeRes, todayAllEarnedRes] = await Promise.all([
       supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStart.toISOString()),
-      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStart.toISOString()),
+      supabase.from("transactions").select("amount").eq("user_id", user.id).in("type", ["commission", "refund"]).eq("status", "approved").gte("created_at", todayStart.toISOString()),
     ]);
     const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
-    const todayAllComm = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const todayAllEarned = (todayAllEarnedRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
     setTodayPackageIncome(todayIncome);
-    setCommissionTotal(todayAllComm);
+    setCommissionTotal(todayAllEarned);
   }, [user]);
 
   // Fetch real activity data for marquee and live withdrawals
@@ -178,6 +178,7 @@ const Dashboard = () => {
       user: a.display_name || "use***@gmail.com",
       amount: Number(a.amount),
       type: a.type,
+      description: a.description || "",
       created_at: a.created_at,
     }));
 
@@ -188,9 +189,25 @@ const Dashboard = () => {
     }
 
     const buildMsg = (item: any) => {
+      const desc = (item.description || "").toLowerCase();
       if (item.type === "withdrawal") return `${item.user} withdrew Rs.${item.amount.toLocaleString()} successfully ✅`;
-      if (item.type === "deposit") return `${item.user} deposited Rs.${item.amount.toLocaleString()} via bank transfer`;
-      return `${item.user} earned Rs.${item.amount.toLocaleString()} commission 🎉`;
+      if (item.type === "deposit") {
+        // Show actual payment method from description
+        if (desc.includes("ezcash") || desc.includes("ez cash")) return `${item.user} deposited Rs.${item.amount.toLocaleString()} via eZ Cash 💰`;
+        if (desc.includes("mcash") || desc.includes("m cash")) return `${item.user} deposited Rs.${item.amount.toLocaleString()} via mCash 💰`;
+        return `${item.user} deposited Rs.${item.amount.toLocaleString()} via bank transfer 💰`;
+      }
+      if (item.type === "refund") {
+        if (desc.includes("redeem") || desc.includes("promo")) return `${item.user} redeemed a promo code worth Rs.${item.amount.toLocaleString()} 🎁`;
+        if (desc.includes("cashback")) return `${item.user} received Rs.${item.amount.toLocaleString()} cashback 🎁`;
+        return `${item.user} received Rs.${item.amount.toLocaleString()} bonus 🎁`;
+      }
+      if (item.type === "commission") {
+        if (desc.includes("daily package income")) return `${item.user} earned Rs.${item.amount.toLocaleString()} package income 📦`;
+        if (desc.includes("sign-in")) return `${item.user} claimed Rs.${item.amount.toLocaleString()} daily reward ✅`;
+        return `${item.user} earned Rs.${item.amount.toLocaleString()} commission 🎉`;
+      }
+      return `${item.user} earned Rs.${item.amount.toLocaleString()} 🎉`;
     };
 
     if (allActivity.length > 0) {
@@ -227,7 +244,7 @@ const Dashboard = () => {
         supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).eq("is_active", true).order("purchased_at", { ascending: false }),
         supabase.from("slider_banners").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
         supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%").gte("created_at", todayStart.toISOString()),
-        supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").gte("created_at", todayStart.toISOString()),
+        supabase.from("transactions").select("amount").eq("user_id", user.id).in("type", ["commission", "refund"]).eq("status", "approved").gte("created_at", todayStart.toISOString()),
         supabase.from("daily_signins").select("id").eq("user_id", user.id).eq("signed_in_date", todayDateStr).maybeSingle(),
       ]);
 
@@ -239,9 +256,9 @@ const Dashboard = () => {
       setBanners((bannersRes.data || []) as SliderBanner[]);
 
       const todayIncome = (todayIncomeRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
-      const todayAllComm = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
+      const todayAllEarned = (todayAllCommRes.data || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
       setTodayPackageIncome(todayIncome);
-      setCommissionTotal(todayAllComm);
+      setCommissionTotal(todayAllEarned);
       setDailyCheckedIn(!!signinRes.data);
       setLoading(false);
     };
@@ -288,14 +305,28 @@ const Dashboard = () => {
           const name = ((profile?.display_name || "user") as string).toLowerCase().replace(/\s+/g, "");
           const masked = name.slice(0, 3) + "***@gmail.com";
 
+          const txDesc = (tx.description || "").toLowerCase();
           if (tx.type === "withdrawal") {
             const newItem: LivePayout = { user: masked, amount: Number(tx.amount), key: keyCounter++, type: "withdrawal", isNew: true };
             setLivePayouts(prev => [newItem, ...prev.slice(0, 14).map(p => ({ ...p, isNew: false }))]);
             setMarqueeMsg(`${masked} withdrew Rs.${Number(tx.amount).toLocaleString()} successfully ✅`);
           } else if (tx.type === "deposit") {
-            setMarqueeMsg(`${masked} deposited Rs.${Number(tx.amount).toLocaleString()} via bank transfer`);
+            const method = txDesc.includes("ezcash") || txDesc.includes("ez cash") ? "eZ Cash" : txDesc.includes("mcash") || txDesc.includes("m cash") ? "mCash" : "bank transfer";
+            setMarqueeMsg(`${masked} deposited Rs.${Number(tx.amount).toLocaleString()} via ${method} 💰`);
+          } else if (tx.type === "refund") {
+            if (txDesc.includes("redeem") || txDesc.includes("promo")) {
+              setMarqueeMsg(`${masked} redeemed a promo code worth Rs.${Number(tx.amount).toLocaleString()} 🎁`);
+            } else {
+              setMarqueeMsg(`${masked} received Rs.${Number(tx.amount).toLocaleString()} cashback 🎁`);
+            }
           } else if (tx.type === "commission") {
-            setMarqueeMsg(`${masked} earned Rs.${Number(tx.amount).toLocaleString()} commission 🎉`);
+            if (txDesc.includes("daily package income")) {
+              setMarqueeMsg(`${masked} earned Rs.${Number(tx.amount).toLocaleString()} package income 📦`);
+            } else if (txDesc.includes("sign-in")) {
+              setMarqueeMsg(`${masked} claimed Rs.${Number(tx.amount).toLocaleString()} daily reward ✅`);
+            } else {
+              setMarqueeMsg(`${masked} earned Rs.${Number(tx.amount).toLocaleString()} commission 🎉`);
+            }
           } else {
             return;
           }

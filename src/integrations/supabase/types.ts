@@ -684,6 +684,7 @@ export type Database = {
         Returns: {
           amount: number
           created_at: string
+          description: string
           display_name: string
           type: string
         }[]
