@@ -129,7 +129,7 @@ const AdminAlerts = () => {
     if (newAlerts.length > 0) {
       for (const alert of newAlerts) {
         const { data: existing } = await supabase.from("admin_alerts").select("id")
-          .eq("alert_type", alert.alert_type).eq("title", alert.title).eq("is_resolved", false).maybeSingle();
+          .eq("alert_type", alert.alert_type).eq("title", alert.title).maybeSingle();
         if (!existing) {
           await supabase.from("admin_alerts").insert(alert);
         }
@@ -144,8 +144,8 @@ const AdminAlerts = () => {
 
   const handleResolve = async (id: string) => {
     setProcessing(id);
-    await supabase.from("admin_alerts").delete().eq("id", id);
-    toast.success("Alert deleted");
+    await supabase.from("admin_alerts").update({ is_resolved: true }).eq("id", id);
+    toast.success("Alert resolved");
     setProcessing(null);
     setExpandedId(null);
     fetchAlerts();
