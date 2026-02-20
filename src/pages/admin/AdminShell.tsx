@@ -107,9 +107,19 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
       const profileMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
       const newAlerts: any[] = [];
 
+      // Only use each user's LATEST log to avoid stale historical matches
+      const latestPerUser = new Map<string, typeof logs[0]>();
+      logs.forEach(l => {
+        const existing = latestPerUser.get(l.user_id);
+        if (!existing || new Date(l.created_at) > new Date(existing.created_at)) {
+          latestPerUser.set(l.user_id, l);
+        }
+      });
+      const latestLogs = Array.from(latestPerUser.values());
+
       // Check IPs
       const ipMap = new Map<string, Set<string>>();
-      logs.forEach(l => {
+      latestLogs.forEach(l => {
         if (!l.ip_address || l.ip_address === "unknown") return;
         if (!ipMap.has(l.ip_address)) ipMap.set(l.ip_address, new Set());
         ipMap.get(l.ip_address)!.add(l.user_id);
@@ -129,7 +139,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
 
       // Check fingerprints
       const fpMap = new Map<string, Set<string>>();
-      logs.forEach(l => {
+      latestLogs.forEach(l => {
         if (!l.fingerprint) return;
         if (!fpMap.has(l.fingerprint)) fpMap.set(l.fingerprint, new Set());
         fpMap.get(l.fingerprint)!.add(l.user_id);
