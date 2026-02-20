@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tag, Gift, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 const Redeem = () => {
   const { user } = useAuth();
@@ -13,7 +12,6 @@ const Redeem = () => {
   const [loading, setLoading] = useState(false);
   const [creditScore, setCreditScore] = useState(100);
 
-  // Fetch credit score on mount
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("credit_score").eq("user_id", user.id).maybeSingle()
@@ -25,105 +23,26 @@ const Redeem = () => {
     if (!user) return;
     setLoading(true);
 
-    // Find the code
-    const { data: codeData } = await supabase
-      .from("redeem_codes")
-      .select("*")
-      .eq("code", code.trim().toUpperCase())
-      .eq("is_active", true)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc("redeem_promo_code", { p_code: code.trim() });
 
-    if (!codeData) {
-      toast.error("Invalid or expired promo code. Please try again.");
+    if (error) {
+      toast.error("Failed to redeem code. Please try again.");
       setLoading(false);
       setCode("");
       return;
     }
 
-    // Check expiry
-    if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
-      toast.error("This promo code has expired.");
+    const result = data as any;
+    if (!result?.success) {
+      toast.error(result?.error || "Failed to redeem code");
       setLoading(false);
       setCode("");
       return;
     }
 
-    // Check max uses
-    if (codeData.current_uses >= codeData.max_uses) {
-      toast.error("This promo code has reached its usage limit.");
-      setLoading(false);
-      setCode("");
-      return;
-    }
-
-    // Check if user already used this code
-    const { data: existing } = await supabase
-      .from("redeem_code_uses")
-      .select("id")
-      .eq("code_id", codeData.id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (existing) {
-      toast.error("You have already used this promo code.");
-      setLoading(false);
-      setCode("");
-      return;
-    }
-
-    // Scale reward by credit score
-    const baseReward = Number(codeData.reward_amount);
-    const scaledReward = Math.round(baseReward * creditScore / 100 * 100) / 100;
-    const actualReward = Math.max(scaledReward, 1); // minimum 1
-
-    // Get wallet balance BEFORE update for verification
-    const { data: walletBefore } = await supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle();
-    const balBefore = Number(walletBefore?.balance ?? 0);
-
-    // Credit wallet
-    const { error: walletError } = await supabase.from("wallets")
-      .update({ balance: balBefore + actualReward })
-      .eq("user_id", user.id);
-
-    if (walletError) {
-      toast.error("Failed to credit wallet. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    // Verify balance was actually updated
-    const { data: walletAfter } = await supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle();
-    const balAfter = Number(walletAfter?.balance ?? 0);
-
-    if (Math.abs(balAfter - (balBefore + actualReward)) > 0.01) {
-      // Balance mismatch - log alert for admin
-      await supabase.from("admin_alerts").insert({
-        alert_type: "integrity_error",
-        severity: "critical",
-        title: "⚠️ Balance Mismatch on Redeem Code",
-        description: `User redeemed code ${codeData.code}. Before: Rs ${balBefore}, Reward: Rs ${actualReward}, Expected: Rs ${balBefore + actualReward}, Actual: Rs ${balAfter}`,
-        related_user_ids: [user.id],
-      });
-    }
-
-    await supabase.from("redeem_code_uses").insert({ code_id: codeData.id, user_id: user.id });
-    await supabase.from("redeem_codes").update({ current_uses: codeData.current_uses + 1 }).eq("id", codeData.id);
-
-    // Create transaction as 'refund' type so it shows in Today's Earnings
-    await supabase.from("transactions").insert({
-      user_id: user.id, type: "refund" as const, amount: actualReward,
-      status: "approved" as const,
-      description: `Redeemed promo code: ${codeData.code}${creditScore < 100 ? ` (scaled by ${creditScore}% credit)` : ""}`,
-    });
-
-    // Create notification
-    await supabase.from("notifications").insert({
-      user_id: user.id, type: "promo",
-      title: "Promo Code Redeemed!",
-      description: `You received Rs ${actualReward.toLocaleString()} from promo code ${codeData.code}.${creditScore < 100 ? ` (Reduced from Rs ${baseReward.toLocaleString()} due to ${creditScore}% credit score)` : ""}`,
-    });
-
-    toast.success(`Rs ${actualReward.toLocaleString()} added to your wallet!${creditScore < 100 ? ` (${creditScore}% credit score applied)` : ""}`);
+    const actualReward = result.reward;
+    const cs = result.credit_score;
+    toast.success(`Rs ${Number(actualReward).toLocaleString()} added to your wallet!${cs < 100 ? ` (${cs}% credit score applied)` : ""}`);
     setCode("");
     setLoading(false);
   };

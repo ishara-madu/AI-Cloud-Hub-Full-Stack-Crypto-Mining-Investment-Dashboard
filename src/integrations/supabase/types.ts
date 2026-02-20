@@ -699,6 +699,7 @@ export type Database = {
       process_all_daily_incomes: { Args: never; Returns: Json }
       process_expired_bans: { Args: never; Returns: Json }
       purchase_package: { Args: { p_package_id: string }; Returns: Json }
+      redeem_promo_code: { Args: { p_code: string }; Returns: Json }
       submit_withdrawal: {
         Args: { p_amount: number; p_bank_account_id: string }
         Returns: Json
