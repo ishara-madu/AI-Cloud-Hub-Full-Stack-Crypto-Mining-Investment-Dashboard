@@ -185,7 +185,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
-          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_method: string
           slip_url: string | null
           status: Database["public"]["Enums"]["request_status"]
           updated_at: string
@@ -196,7 +196,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
-          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_method: string
           slip_url?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           updated_at?: string
@@ -207,7 +207,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
-          payment_method?: Database["public"]["Enums"]["payment_method"]
+          payment_method?: string
           slip_url?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           updated_at?: string
