@@ -484,15 +484,11 @@ const Dashboard = () => {
                 const totalDays = up.expires_at
                   ? Math.ceil((new Date(up.expires_at).getTime() - new Date(up.purchased_at).getTime()) / 86400000)
                   : 30;
-                // Use Sri Lanka time for day calculations
-                const sriLankaNowMs = Date.now() + 5.5 * 60 * 60 * 1000;
-                const purchasedMs = new Date(up.purchased_at).getTime() + 5.5 * 60 * 60 * 1000;
-                const daysElapsed = Math.min(
-                  Math.ceil((sriLankaNowMs - purchasedMs) / 86400000),
-                  totalDays
-                );
                 // Subtract 1 because first-day income is credited at purchase
-                const daysRemaining = Math.max(totalDays - daysElapsed - 1, 0);
+                const daysRemaining = up.expires_at
+                  ? Math.max(0, Math.ceil((new Date(up.expires_at).getTime() - Date.now()) / 86400000) - 1)
+                  : 29;
+                const daysElapsed = Math.max(0, totalDays - daysRemaining - 1);
                 const progressPct = Math.round((daysElapsed / totalDays) * 100);
 
                 return (
