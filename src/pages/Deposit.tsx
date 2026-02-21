@@ -68,7 +68,7 @@ const Deposit = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!amt || amt < 500) { toast.error("Minimum deposit is Rs 500"); return; }
     if (!user) return;
     setLoading(true);
 
@@ -134,6 +134,16 @@ const Deposit = () => {
       </div>
 
       <div className="px-4 space-y-5 pb-8">
+        {methodsLoaded && paymentMethods.length === 0 ? (
+          <div className="shadow-neu rounded-2xl bg-card p-6 text-center space-y-3">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <Building2 className="w-8 h-8 text-destructive" />
+            </div>
+            <h2 className="text-lg font-heading font-bold text-foreground">Deposits Currently Unavailable</h2>
+            <p className="text-sm text-muted-foreground">All payment methods are currently disabled. Please try again later or contact support.</p>
+            <Link to="/dashboard"><Button variant="outline" className="rounded-xl">Back to Dashboard</Button></Link>
+          </div>
+        ) : (<>
         {/* Payment Method Selection */}
         <div>
           <p className="text-sm font-medium text-muted-foreground mb-2">Select Method</p>
@@ -237,8 +247,9 @@ const Deposit = () => {
             {(loading || uploading) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {uploading ? "Uploading Slip..." : "Confirm Deposit"}
           </Button>
-          <p className="text-xs text-destructive text-center font-medium">⚠️ Transfer exact amount. Requests are processed within 30 minutes.</p>
+          <p className="text-xs text-destructive text-center font-medium">⚠️ Minimum deposit Rs 500. Transfer exact amount. Requests are processed within 30 minutes.</p>
         </form>
+        </>)}
       </div>
     </div>
   );
