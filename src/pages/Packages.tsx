@@ -233,7 +233,7 @@ const Packages = () => {
                   : 30;
                 // Calculate remaining days directly from expiry (same as admin view)
                 const daysRemaining = up.expires_at
-                  ? Math.max(0, Math.ceil((new Date(up.expires_at).getTime() - Date.now()) / 86400000))
+                  ? Math.max(0, Math.round((new Date(new Date(up.expires_at).toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000))
                   : 30;
                 const daysElapsed = Math.max(0, totalDays - daysRemaining);
                 const progressPct = Math.round((daysElapsed / totalDays) * 100);

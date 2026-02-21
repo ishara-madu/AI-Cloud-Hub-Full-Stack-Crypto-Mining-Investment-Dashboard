@@ -647,7 +647,7 @@ const AdminUserDetail = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {userPackages.filter(p => p.is_active).map(pkg => {
                     const daysRemaining = pkg.expires_at
-                      ? Math.max(0, Math.ceil((new Date(pkg.expires_at).getTime() - Date.now()) / 86400000))
+                      ? Math.max(0, Math.round((new Date(new Date(pkg.expires_at).toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000))
                       : null;
                     return (
                       <div key={pkg.id} className="bg-muted/30 rounded-xl px-3 py-2.5 flex items-center justify-between text-xs">
@@ -805,7 +805,7 @@ const AdminUserDetail = () => {
                   </div>
                   {pkg.is_active && (() => {
                     const remainingDays = pkg.expires_at
-                      ? Math.max(0, Math.ceil((new Date(pkg.expires_at).getTime() - Date.now()) / 86400000))
+                      ? Math.max(0, Math.round((new Date(new Date(pkg.expires_at).toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000))
                       : null;
                     const isExpired = remainingDays !== null && remainingDays === 0;
                     return (
