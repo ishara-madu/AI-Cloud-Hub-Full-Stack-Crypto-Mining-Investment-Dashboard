@@ -484,10 +484,9 @@ const Dashboard = () => {
                 const totalDays = up.expires_at
                   ? Math.ceil((new Date(up.expires_at).getTime() - new Date(up.purchased_at).getTime()) / 86400000)
                   : 30;
-                // Subtract 1 because first-day income is credited at purchase
                 const daysRemaining = up.expires_at
-                  ? Math.max(0, Math.ceil((new Date(up.expires_at).getTime() - Date.now()) / 86400000) - 1)
-                  : 29;
+                  ? Math.max(0, Math.ceil((new Date(up.expires_at).getTime() - Date.now()) / 86400000))
+                  : 30;
                 const daysElapsed = Math.max(0, totalDays - daysRemaining);
                 const progressPct = Math.round((daysElapsed / totalDays) * 100);
 
