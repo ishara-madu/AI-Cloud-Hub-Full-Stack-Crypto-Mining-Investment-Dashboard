@@ -56,31 +56,22 @@ const Packages = () => {
 
       const rawUserPkgs = (upRes.data || []) as UserPackage[];
 
-      // Fetch actual earned amounts from transactions for each user package
-      if (user && rawUserPkgs.length > 0) {
-        const { data: earnedTxns } = await supabase
-          .from("transactions")
-          .select("amount, description, created_at")
-          .eq("user_id", user.id)
-          .eq("type", "commission")
-          .eq("status", "approved")
-          .ilike("description", "Daily package income%");
-
-        // Sum all daily package income transactions as total earned
-        const totalEarned = (earnedTxns || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
-
-        // Distribute total earned proportionally among packages by their price_paid
-        const totalInvested = rawUserPkgs.reduce((s, up) => s + Number(up.price_paid), 0);
-        const withEarned = rawUserPkgs.map((up) => ({
+      // Calculate earned per package deterministically: daysElapsed × dailyIncome
+      const withEarned = rawUserPkgs.map((up) => {
+        const totalDays = up.expires_at
+          ? Math.ceil((new Date(up.expires_at).getTime() - new Date(up.purchased_at).getTime()) / 86400000)
+          : 30;
+        const daysRemaining = up.expires_at
+          ? Math.max(0, Math.round((new Date(new Date(up.expires_at).toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000))
+          : 30;
+        const daysElapsed = Math.max(0, totalDays - daysRemaining);
+        const dailyIncome = Math.round(Number(up.price_paid) * 0.05);
+        return {
           ...up,
-          actualEarned: totalInvested > 0
-            ? Math.round((Number(up.price_paid) / totalInvested) * totalEarned)
-            : 0,
-        }));
-        setUserPackages(withEarned as UserPackage[]);
-      } else {
-        setUserPackages(rawUserPkgs);
-      }
+          actualEarned: dailyIncome * daysElapsed,
+        };
+      });
+      setUserPackages(withEarned as UserPackage[]);
 
       setLoading(false);
     };
@@ -108,10 +99,13 @@ const Packages = () => {
     // Refresh user packages with actual earned amounts
     const upRes = await supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).order("purchased_at", { ascending: false });
     const rawUserPkgs = (upRes.data || []) as UserPackage[];
-    const { data: earnedTxns } = await supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").ilike("description", "Daily package income%");
-    const totalEarned = (earnedTxns || []).reduce((s: number, t: any) => s + Number(t.amount), 0);
-    const totalInvested = rawUserPkgs.reduce((s, up) => s + Number(up.price_paid), 0);
-    setUserPackages(rawUserPkgs.map((up) => ({ ...up, actualEarned: totalInvested > 0 ? Math.round((Number(up.price_paid) / totalInvested) * totalEarned) : 0 })));
+    setUserPackages(rawUserPkgs.map((up) => {
+      const totalDays = up.expires_at ? Math.ceil((new Date(up.expires_at).getTime() - new Date(up.purchased_at).getTime()) / 86400000) : 30;
+      const daysRemaining = up.expires_at ? Math.max(0, Math.round((new Date(new Date(up.expires_at).toDateString()).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000)) : 30;
+      const daysElapsed = Math.max(0, totalDays - daysRemaining);
+      const dailyIncome = Math.round(Number(up.price_paid) * 0.05);
+      return { ...up, actualEarned: dailyIncome * daysElapsed };
+    }));
     setBuying(null);
   };
 
