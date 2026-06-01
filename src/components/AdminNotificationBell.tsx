@@ -22,19 +22,29 @@ const AdminNotificationBell = () => {
 
     fetchAlerts();
 
-    // Realtime subscription for instant updates
+    const channelName = "admin-alerts-realtime";
+
+    // 1. අලුතින් subscribe වෙන්න කලින්, මේ නමින් තියෙන පරණ channels ඔක්කොම client එකෙන් අයින් කරන්න
+    supabase.getChannels().forEach((c) => {
+      if (c.topic === `realtime:${channelName}`) {
+        supabase.removeChannel(c);
+      }
+    });
+
+    // 2. ඊටපස්සේ සාමාන්‍ය විදියටම fixed නම පාවිච්චි කරලා channel එක හදන්න
     const channel = supabase
-      .channel("admin-alerts-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "admin_alerts" },
         () => {
           fetchAlerts();
-        }
+        },
       )
       .subscribe();
 
     return () => {
+      // 3. Component එක unmount වෙද්දී channel එක අයින් කරන්න
       supabase.removeChannel(channel);
     };
   }, [isAdmin]);
@@ -43,7 +53,12 @@ const AdminNotificationBell = () => {
 
   return (
     <Link to="/admin/alerts" className="relative">
-      <Bell className={cn("w-5 h-5", unresolvedCount > 0 ? "text-destructive" : "text-muted-foreground")} />
+      <Bell
+        className={cn(
+          "w-5 h-5",
+          unresolvedCount > 0 ? "text-destructive" : "text-muted-foreground",
+        )}
+      />
       {unresolvedCount > 0 && (
         <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center animate-pulse">
           {unresolvedCount > 9 ? "9+" : unresolvedCount}

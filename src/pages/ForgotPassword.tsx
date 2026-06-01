@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Cloud } from "lucide-react";
+import { Loader2, Cloud, Mail } from "lucide-react";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -39,7 +39,7 @@ const ForgotPassword = () => {
           {sent ? (
             <CardContent className="pt-6 text-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
-                <span className="text-2xl">✉️</span>
+                <Mail className="w-8 h-8 text-success" />
               </div>
               <CardTitle className="font-heading">Check your email</CardTitle>
               <p className="text-muted-foreground">We've sent a password reset link to <strong>{email}</strong></p>

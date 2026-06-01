@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Trash2, ChevronDown, ChevronUp, Coins, Shield, Megaphone, Gift, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
-const typeEmoji: Record<string, string> = {
-  money: "💰",
-  security: "🔒",
-  system: "📢",
-  promo: "🎁",
-  update: "🚀",
+const typeIcons: Record<string, any> = {
+  money: Coins,
+  security: Shield,
+  system: Megaphone,
+  promo: Gift,
+  update: Rocket,
 };
 
 const Notifications = () => {
@@ -107,7 +107,10 @@ const Notifications = () => {
               >
                 <div className="flex items-start gap-3">
                   <div className="relative w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-lg">
-                    {typeEmoji[n.type] || "📢"}
+                    {(() => {
+                      const Icon = typeIcons[n.type] || Megaphone;
+                      return <Icon className="w-5 h-5 text-primary" />;
+                    })()}
                     {!n.is_read && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-card" />
                     )}

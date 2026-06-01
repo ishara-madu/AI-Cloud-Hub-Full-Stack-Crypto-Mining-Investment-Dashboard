@@ -1,7 +1,10 @@
-project_id = "eembbikxvthoprcunjlg"
+project_id = "tgvylqonearrsjtcoarg"
 
 [functions.delete-user]
 verify_jwt = false
 
 [functions.check-vpn]
+verify_jwt = false
+
+[functions.nowpayments-webhook]
 verify_jwt = false

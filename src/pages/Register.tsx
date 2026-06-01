@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Cloud } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { logDeviceAdvanced, checkDuplicateDevice } from "@/lib/fingerprint";
 
 const Register = () => {
@@ -66,10 +66,14 @@ const Register = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center glow-orange"><Cloud className="w-6 h-6 text-primary-foreground" /></div>
+          <div className="flex flex-col items-center gap-3 mb-2">
+            <img
+              src="/logo.webp"
+              alt="AI Cloud Hub Logo"
+              className="w-20 h-20 object-contain drop-shadow-lg"
+            />
           </div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">AICloudHub</h1>
+          <h1 className="text-2xl font-heading font-bold text-foreground">AI Cloud Hub</h1>
           <p className="text-sm text-muted-foreground mt-1">Join the AI revolution</p>
         </div>
 

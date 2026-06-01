@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Brain, Database as DbIcon, Cpu, Server, Zap, Star, Loader2, Package } from "lucide-react";
+import { Brain, Database as DbIcon, Cpu, Server, Zap, Star, Loader2, Package, Check } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
 import { cn } from "@/lib/utils";
 
 interface AiPackage {
@@ -95,7 +96,7 @@ const Packages = () => {
     const result = data as any;
     if (!result?.success) { toast.error(result?.error || "Purchase failed"); setBuying(null); return; }
     const dailyIncome = result.daily_income ?? 0;
-    toast.success(`✅ ${pkg.name} purchased! +Rs.${dailyIncome.toLocaleString()} first-day income credited!`);
+    toast.success(`${pkg.name} rented successfully! +Rs.${dailyIncome.toLocaleString()} first-day income credited!`);
     // Refresh user packages with actual earned amounts
     const upRes = await supabase.from("user_packages").select("*, ai_packages(name, description)").eq("user_id", user.id).order("purchased_at", { ascending: false });
     const rawUserPkgs = (upRes.data || []) as UserPackage[];
@@ -121,7 +122,9 @@ const Packages = () => {
     return true;
   };
 
-  if (loading) return <div className="px-4 py-4 space-y-4"><Skeleton className="h-8 w-48" /><div className="grid grid-cols-2 gap-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-60 rounded-2xl" />)}</div></div>;
+  if (loading) {
+    return <LoadingScreen title="Loading Cloud Market" subtitle="Retrieving computing nodes and GPU inventory..." />;
+  }
 
   const filteredPkgs = packages.filter((p) => filterCategory(p.name));
 
@@ -197,7 +200,9 @@ const Packages = () => {
                     ) : isSoldOut ? (
                       <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-lg block text-center">Sold Out</span>
                     ) : isOwned ? (
-                      <span className="text-[10px] text-success bg-success/10 border border-success/30 px-2 py-1 rounded-lg block text-center font-semibold">✓ Active</span>
+                      <span className="text-[10px] text-success bg-success/10 border border-success/30 px-2 py-1 rounded-lg flex items-center justify-center gap-1 font-semibold">
+                        <Check className="w-3 h-3" /> Active
+                      </span>
                     ) : (
                       <Button
                         size="sm"
@@ -218,7 +223,10 @@ const Packages = () => {
         {/* My Packages */}
         {userPackages.length > 0 && (
           <div className="mt-6" ref={myPackagesRef} id="my-packages">
-            <h2 className="text-base font-heading font-bold text-foreground mb-3">📦 My Active Packages</h2>
+            <h2 className="text-base font-heading font-bold text-foreground mb-3 flex items-center gap-2">
+              <Package className="w-4 h-4 text-primary shrink-0" />
+              <span>My Active Packages</span>
+            </h2>
             <div className="space-y-3">
               {userPackages.map((up) => {
                 const dailyIncome = Math.round(up.price_paid * 0.05);

@@ -13,7 +13,7 @@ import {
   Tag, Bell, ArrowDownToLine, ArrowUpFromLine, CloudDownload,
   ShieldCheck
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import LoadingScreen from "@/components/LoadingScreen";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
@@ -135,7 +135,9 @@ const Settings = () => {
     { label: "About Us", icon: Info, key: "about", action: () => navigate("/about") },
   ];
 
-  if (loading) return <div className="px-4 py-4 space-y-4"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
+  if (loading) {
+    return <LoadingScreen title="Loading Settings" subtitle="Fetching profile configurations..." />;
+  }
 
   // Profile avatar: Google pic or name initial
   const profileAvatar = isGoogleUser && googleAvatar ? (
@@ -182,8 +184,9 @@ const Settings = () => {
           </div>
 
           {isFrozen && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2 text-xs text-destructive font-medium">
-              🔒 Account Frozen — Contact support
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2 text-xs text-destructive font-medium flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>Account Frozen — Contact support</span>
             </div>
           )}
           <div className="flex items-center gap-2 bg-muted/30 rounded-xl px-3 py-2">

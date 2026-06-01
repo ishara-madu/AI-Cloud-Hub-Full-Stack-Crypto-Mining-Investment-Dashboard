@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Loader2, Trash2, Upload, X, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Trash2, Upload, X, Pencil, Check, Image as ImageIcon, Link2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const gradientOptions = [
@@ -226,8 +226,20 @@ const AdminSliders = () => {
                   </div>
                 )}
                 <CardContent className="p-3 flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    Order: {b.sort_order} {b.image_url && "• 🖼"} {b.link_url && "• 🔗"}
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <span>Order: {b.sort_order}</span>
+                    {b.image_url && (
+                      <span className="flex items-center gap-0.5">
+                        <span>•</span>
+                        <ImageIcon className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                    {b.link_url && (
+                      <span className="flex items-center gap-0.5">
+                        <span>•</span>
+                        <Link2 className="w-3.5 h-3.5" />
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <Switch checked={b.is_active} onCheckedChange={() => handleToggle(b.id, b.is_active)} />

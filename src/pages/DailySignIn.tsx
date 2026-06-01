@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarCheck, Gift } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
+import { CalendarCheck, Gift, Check, Flame, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +84,7 @@ const DailySignIn = () => {
     const reward = result?.reward ?? 10;
     setCheckedIn(true);
     setWeekSignins(prev => [...prev, todayStr]);
-    toast.success(`✅ Checked in! Rs ${reward} added to your balance.`);
+    toast.success(`Checked in successfully! Rs ${reward} added to your balance.`);
     setChecking(false);
   };
 
@@ -105,7 +105,9 @@ const DailySignIn = () => {
     return weekSignins.includes(dateStr);
   };
 
-  if (loading) return <div className="px-4 py-6 space-y-4"><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-14 rounded-2xl" /></div>;
+  if (loading) {
+    return <LoadingScreen title="Loading Rewards" subtitle="Checking check-in status..." />;
+  }
 
   return (
     <div className="animate-fade-in px-4 py-6 space-y-6">
@@ -146,7 +148,7 @@ const DailySignIn = () => {
                   "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
                   isToday ? "bg-white/20 text-primary-foreground" : signed ? "bg-success/20 text-success" : isPast ? "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  {signed ? "✓" : i + 1}
+                  {signed ? <Check className="w-4 h-4 text-success" /> : i + 1}
                 </div>
                 <span className={cn(
                   "text-[9px]",
@@ -172,12 +174,15 @@ const DailySignIn = () => {
         )}
       >
         <CalendarCheck className="w-5 h-5 mr-2" />
-        {checkedIn ? "Checked In ✓" : "Check In Now (+Rs 10)"}
+        {checkedIn ? "Checked In" : "Check In Now (+Rs 10)"}
       </Button>
 
       {/* Streak info */}
       <div className="shadow-neu rounded-2xl bg-card p-4 text-center space-y-1">
-        <p className="text-xs text-muted-foreground">🔥 Current Streak</p>
+        <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+          <Flame className="w-4 h-4 text-destructive animate-pulse shrink-0" />
+          <span>Current Streak</span>
+        </p>
         <p className="text-2xl font-heading font-bold text-foreground">{getStreak()} Days</p>
         <p className="text-[10px] text-muted-foreground">Sign in 7 consecutive days for a Rs.100 bonus!</p>
       </div>

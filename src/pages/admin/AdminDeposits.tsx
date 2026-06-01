@@ -59,7 +59,7 @@ const AdminDeposits = () => {
       }
       await supabase.from("notifications").insert({
         user_id: userId, type: "money",
-        title: "Deposit Rejected ❌",
+        title: "Deposit Rejected",
         description: `Your deposit request of Rs ${amount.toLocaleString()} has been rejected. Please contact support for details.`,
       });
       const { data: profile } = await supabase.from("profiles").select("credit_score").eq("user_id", userId).maybeSingle();

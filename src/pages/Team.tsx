@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import LoadingScreen from "@/components/LoadingScreen";
 import { toast } from "sonner";
-import { Users, Copy, User } from "lucide-react";
+import { Users, Copy, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Referral {
@@ -76,7 +76,9 @@ const Team = () => {
     return rate > 0 ? `Invite friends to earn ${rate}% commission!` : "Invite friends to earn commission!";
   };
 
-  if (loading) return <div className="px-4 py-4 space-y-4"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
+  if (loading) {
+    return <LoadingScreen title="Loading Team Report" subtitle="Structuring referral trees..." />;
+  }
 
   return (
     <div className="animate-fade-in">

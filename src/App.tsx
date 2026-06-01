@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
@@ -43,6 +44,57 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 
 const queryClient = new QueryClient();
 
+const PageTitleUpdater = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const titleMap: Record<string, string> = {
+      "/dashboard": "Dashboard | AI Cloud Hub",
+      "/login": "Login | AI Cloud Hub",
+      "/register": "Register | AI Cloud Hub",
+      "/privacy-policy": "Privacy Policy | AI Cloud Hub",
+      "/terms": "Terms & Conditions | AI Cloud Hub",
+      "/forgot-password": "Forgot Password | AI Cloud Hub",
+      "/reset-password": "Reset Password | AI Cloud Hub",
+      "/deposit": "Deposit Funds | AI Cloud Hub",
+      "/withdraw": "Withdraw Funds | AI Cloud Hub",
+      "/packages": "Investment Packages | AI Cloud Hub",
+      "/transactions": "Transaction Logs | AI Cloud Hub",
+      "/team": "My Team Network | AI Cloud Hub",
+      "/settings": "Account Settings | AI Cloud Hub",
+      "/daily-signin": "Daily Check-in Reward | AI Cloud Hub",
+      "/about": "About AI Cloud Technologies | AI Cloud Hub",
+      "/redeem": "Redeem Promo Code | AI Cloud Hub",
+      "/notifications": "Notifications & Updates | AI Cloud Hub",
+      "/bank-info": "Bank Account Details | AI Cloud Hub",
+      "/commission-details": "Referral Commissions | AI Cloud Hub",
+      "/earned-history": "Earning History | AI Cloud Hub",
+      "/admin": "Admin Dashboard | AI Cloud Hub",
+      "/admin/users": "User Accounts Management | AI Cloud Hub",
+      "/admin/deposits": "Deposit Approvals Queue | AI Cloud Hub",
+      "/admin/withdrawals": "Withdrawal Approvals Queue | AI Cloud Hub",
+      "/admin/packages": "Investment Package Manager | AI Cloud Hub",
+      "/admin/redeem-codes": "Redeem Codes Manager | AI Cloud Hub",
+      "/admin/sliders": "Homepage Sliders Settings | AI Cloud Hub",
+      "/admin/settings": "Global Platform Settings | AI Cloud Hub",
+      "/admin/user-packages": "User Investment Packages | AI Cloud Hub",
+      "/admin/alerts": "Critical Security Alerts | AI Cloud Hub",
+    };
+
+    const path = location.pathname;
+    
+    // Dynamic matching for admin user detail page
+    if (path.startsWith("/admin/users/")) {
+      document.title = "User Details | AI Cloud Hub";
+      return;
+    }
+
+    document.title = titleMap[path] || "AI Cloud Hub";
+  }, [location]);
+
+  return null;
+};
+
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute><AppLayout>{children}</AppLayout></ProtectedRoute>
 );
@@ -59,6 +111,7 @@ const App = () => (
       <VpnGuard>
       <AuthProvider>
         <BrowserRouter>
+          <PageTitleUpdater />
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Login />} />

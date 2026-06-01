@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Building2, Percent, Save, Trash2, ShieldAlert, Eye, EyeOff, CreditCard, Plus, X } from "lucide-react";
+import { ArrowLeft, Loader2, Building2, Percent, Save, Trash2, ShieldAlert, Eye, EyeOff, CreditCard, Plus, X, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -25,9 +25,10 @@ interface PaymentMethod {
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [bank, setBank] = useState({ bank_name: "", account_name: "", account_number: "", branch: "" });
   const [commission, setCommission] = useState({ level_1: 10, level_2: 5, level_3: 2 });
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [nowpayments, setNowpayments] = useState({ enabled: false, api_key: "" });
+  const [withdrawalMethods, setWithdrawalMethods] = useState<any[]>([]);
 
   // Server restart state
   const [resetDialog, setResetDialog] = useState(false);
@@ -38,14 +39,16 @@ const AdminSettings = () => {
 
   useEffect(() => {
     const fetch = async () => {
-      const [bankRes, comRes, methodsRes] = await Promise.all([
-        supabase.from("platform_settings").select("value").eq("key", "deposit_bank").maybeSingle(),
+      const [comRes, methodsRes, cryptoRes, wmRes] = await Promise.all([
         supabase.from("platform_settings").select("value").eq("key", "commission_rates").maybeSingle(),
         supabase.from("platform_settings").select("value").eq("key", "payment_methods").maybeSingle(),
+        supabase.from("platform_settings").select("value").eq("key", "nowpayments_settings").maybeSingle(),
+        supabase.from("withdrawal_methods").select("*").order("id"),
       ]);
-      if (bankRes.data?.value) setBank(bankRes.data.value as any);
       if (comRes.data?.value) setCommission(comRes.data.value as any);
       if (methodsRes.data?.value) setPaymentMethods(methodsRes.data.value as unknown as PaymentMethod[]);
+      if (cryptoRes.data?.value) setNowpayments(cryptoRes.data.value as any);
+      if (wmRes.data) setWithdrawalMethods(wmRes.data);
       setLoading(false);
     };
     fetch();
@@ -54,9 +57,12 @@ const AdminSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     await Promise.all([
-      supabase.from("platform_settings").update({ value: bank as any, updated_at: new Date().toISOString() }).eq("key", "deposit_bank"),
       supabase.from("platform_settings").update({ value: commission as any, updated_at: new Date().toISOString() }).eq("key", "commission_rates"),
       supabase.from("platform_settings").upsert({ key: "payment_methods", value: paymentMethods as any, updated_at: new Date().toISOString() }, { onConflict: "key" }),
+      supabase.from("platform_settings").update({ value: nowpayments as any, updated_at: new Date().toISOString() }).eq("key", "nowpayments_settings"),
+      ...withdrawalMethods.map(m =>
+        supabase.from("withdrawal_methods").update({ is_active: m.is_active }).eq("id", m.id)
+      )
     ]);
     setSaving(false);
     toast.success("Settings saved!");
@@ -120,24 +126,6 @@ const AdminSettings = () => {
         <h1 className="text-2xl font-heading font-bold text-foreground">Platform Settings</h1>
       </div>
 
-      {/* Deposit Bank Details */}
-      <Card className="shadow-neu border-0">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-heading flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-primary" /> Deposit Bank Details
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">These details are shown to users when they select Bank Transfer</p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1"><Label className="text-xs">Bank Name</Label><Input className="rounded-xl h-9" value={bank.bank_name} onChange={(e) => setBank({ ...bank, bank_name: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Account Name</Label><Input className="rounded-xl h-9" value={bank.account_name} onChange={(e) => setBank({ ...bank, account_name: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Account Number</Label><Input className="rounded-xl h-9" value={bank.account_number} onChange={(e) => setBank({ ...bank, account_number: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Branch</Label><Input className="rounded-xl h-9" value={bank.branch} onChange={(e) => setBank({ ...bank, branch: e.target.value })} /></div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Payment Methods */}
       <Card className="shadow-neu border-0">
         <CardHeader className="pb-2">
@@ -152,6 +140,30 @@ const AdminSettings = () => {
           <p className="text-xs text-muted-foreground">Configure which payment methods users can choose when depositing</p>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Cryptocurrency */}
+          <div className="border border-border rounded-xl p-4 space-y-3 bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <Switch 
+                  checked={nowpayments.enabled} 
+                  onCheckedChange={(v) => setNowpayments(prev => ({ ...prev, enabled: v }))} 
+                />
+                <span className="font-heading font-bold text-sm text-foreground">
+                  Cryptocurrency
+                </span>
+                <span className="bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  System Default
+                </span>
+              </div>
+            </div>
+            {nowpayments.enabled && (
+              <div className="text-[11px] text-muted-foreground bg-muted/40 p-3 rounded-lg border border-border/60">
+                <span className="font-semibold text-foreground block mb-0.5">API Key Configuration</span>
+                The Cryptocurrency API Key is securely managed in your Supabase project secrets as <code className="bg-muted px-1 py-0.5 rounded font-mono text-[10px] text-primary">NOWPAYMENTS_API_KEY</code>.
+              </div>
+            )}
+          </div>
+
           {paymentMethods.map((method) => (
             <div key={method.id} className="border border-border rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -197,6 +209,47 @@ const AdminSettings = () => {
               )}
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Withdrawal Methods */}
+      <Card className="shadow-neu border-0">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-heading flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-primary" /> Withdrawal Methods
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Configure which payout methods are active for user withdrawals</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {withdrawalMethods.map((method) => {
+            const isCrypto = method.id === "crypto";
+            return (
+              <div key={method.id} className="border border-border rounded-xl p-4 space-y-3 bg-muted/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Switch
+                      checked={method.is_active}
+                      onCheckedChange={(checked) => {
+                        setWithdrawalMethods(prev =>
+                          prev.map(m => m.id === method.id ? { ...m, is_active: checked } : m)
+                        );
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-heading font-bold text-sm text-foreground">
+                        {method.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {method.id === "bank_transfer"
+                          ? "Users enter bank name, account number, and IBAN."
+                          : "Users enter public cryptocurrency wallet address and select target coin."}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -261,7 +314,7 @@ const AdminSettings = () => {
       <Dialog open={resetDialog} onOpenChange={(o) => { if (!resetting) { setResetDialog(o); if (!o) { setResetPassword(""); setResetConfirmText(""); } } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive"><Trash2 className="w-5 h-5" />⚠️ Reset All User Data</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-destructive"><Trash2 className="w-5 h-5" /><AlertTriangle className="w-5 h-5" />Reset All User Data</DialogTitle>
             <DialogDescription>This will permanently delete ALL user and admin data from the platform. This action is irreversible.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

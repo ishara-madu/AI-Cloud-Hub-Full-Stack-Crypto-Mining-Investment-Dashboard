@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tag, Gift, Loader2 } from "lucide-react";
+import { Tag, Gift, Loader2, AlertTriangle, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 
 const Redeem = () => {
@@ -87,11 +87,17 @@ const Redeem = () => {
       <div className="shadow-neu rounded-2xl bg-card p-4 text-center space-y-1">
         {creditScore < 100 && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mb-2">
-            <p className="text-yellow-600 font-medium text-xs">⚠️ Credit Score: {creditScore}%</p>
+            <p className="text-yellow-600 font-medium text-xs flex items-center justify-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>Credit Score: {creditScore}%</span>
+            </p>
             <p className="text-[10px] text-muted-foreground mt-1">Your rewards are scaled to {creditScore}% of the original value.</p>
           </div>
         )}
-        <p className="text-xs text-muted-foreground">📋 Promo codes are case-insensitive and single-use per user.</p>
+        <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+          <ClipboardList className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <span>Promo codes are case-insensitive and single-use per user.</span>
+        </p>
         <p className="text-[10px] text-muted-foreground">Contact support if you experience any issues.</p>
       </div>
     </div>

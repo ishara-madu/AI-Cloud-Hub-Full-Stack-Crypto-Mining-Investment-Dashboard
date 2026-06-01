@@ -13,7 +13,7 @@ import {
   Crown, AlertTriangle, Bell, Package, TrendingUp, Activity,
   Smartphone, Clock, Ban, CheckCircle, XCircle, Calendar,
   DollarSign, ArrowUpRight, ArrowDownRight, BarChart3, Info, RefreshCw,
-  Users, Hash, Phone, Link2, Timer
+  Users, Hash, Phone, Link2, Timer, Lock
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -227,7 +227,7 @@ const AdminUserDetail = () => {
     if (score < 100) issues.push(`Daily rewards scaled to ${score}% (Rs ${(10 * score / 100).toFixed(1)} instead of Rs 10)`);
     if (score < 100) issues.push(`Commissions scaled to ${score}% of normal rate`);
     if (score < 100) issues.push(`Redeem code rewards scaled to ${score}% of base amount`);
-    if (score === 0) issues.push("⛔ All earnings, commissions, and rewards are at 0% — maximum penalty reached");
+    if (score === 0) issues.push("All earnings, commissions, and rewards are at 0% — maximum penalty reached");
     
     // Team impact
     if (banCount > 0) issues.push(`Team members' credit scores also reduced (upward & downward cascade)`);
@@ -261,7 +261,7 @@ const AdminUserDetail = () => {
     await supabase.from("profiles").update({ is_frozen: false, ban_expires_at: null }).eq("user_id", userId);
     await supabase.from("notifications").insert({
       user_id: userId, type: "security",
-      title: "Account Unfrozen ✅",
+      title: "Account Unfrozen",
       description: "Your account has been unfrozen by an administrator. You can now use all features normally.",
     });
     toast.success("Account unfrozen");
@@ -422,14 +422,14 @@ const AdminUserDetail = () => {
             <div className="space-y-2">
               {isTempBan && profile.ban_expires_at && (
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-center">
-                  <p className="text-yellow-600 font-bold">⏱ Temporary ban expires in:</p>
+                  <p className="text-yellow-600 font-bold flex items-center justify-center gap-1.5"><Timer className="w-4 h-4" /> Temporary ban expires in:</p>
                   <p className="text-yellow-500 font-mono text-base font-bold mt-1">{formatTimeRemaining(profile.ban_expires_at)}</p>
                   <p className="text-muted-foreground text-[10px] mt-0.5">{new Date(profile.ban_expires_at).toLocaleString()}</p>
                 </div>
               )}
               {isPermanentBan && (
                 <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2 text-xs text-center">
-                  <p className="text-destructive font-bold">🔒 Permanent Ban — Account fully frozen</p>
+                  <p className="text-destructive font-bold flex items-center justify-center gap-1.5"><Lock className="w-4 h-4" /> Permanent Ban — Account fully frozen</p>
                 </div>
               )}
               <Button onClick={handleUnban} className="w-full rounded-xl" variant="default">
@@ -563,10 +563,10 @@ const AdminUserDetail = () => {
                     <span className="text-muted-foreground">Account Status</span>
                     {isBanActive ? (
                       isTempBan
-                        ? <Badge className="bg-yellow-500/20 text-yellow-600 text-[10px]">⏱ Temp Ban</Badge>
-                        : <Badge className="bg-destructive/20 text-destructive text-[10px]">🔒 Permanent Ban</Badge>
+                        ? <Badge className="bg-yellow-500/20 text-yellow-600 text-[10px]"><Timer className="w-3 h-3 mr-1" />Temp Ban</Badge>
+                        : <Badge className="bg-destructive/20 text-destructive text-[10px]"><Lock className="w-3 h-3 mr-1" />Permanent Ban</Badge>
                     ) : (
-                      <Badge className="bg-emerald-500/20 text-emerald-600 text-[10px]">✅ Active</Badge>
+                      <Badge className="bg-emerald-500/20 text-emerald-600 text-[10px]"><CheckCircle className="w-3 h-3 mr-1" />Active</Badge>
                     )}
                   </div>
                   {isTempBan && profile.ban_expires_at && (
@@ -610,8 +610,8 @@ const AdminUserDetail = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-emerald-500/10 rounded-lg px-3 py-2 text-xs text-emerald-600 text-center">
-                      ✅ No ban history — clean record
+                    <div className="bg-emerald-500/10 rounded-lg px-3 py-2 text-xs text-emerald-600 text-center flex items-center justify-center gap-1.5">
+                      <CheckCircle className="w-4 h-4" /> No ban history — clean record
                     </div>
                   )}
                 </div>

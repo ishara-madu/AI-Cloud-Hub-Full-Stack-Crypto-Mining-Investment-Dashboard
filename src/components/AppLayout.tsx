@@ -6,15 +6,16 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   Home, Package, ShoppingCart, Users, User, Bell, X,
+  Coins, Shield, Megaphone, Gift, Rocket
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const typeEmoji: Record<string, string> = {
-  money: "💰",
-  security: "🔒",
-  system: "📢",
-  promo: "🎁",
-  update: "🚀",
+const typeIcons: Record<string, any> = {
+  money: Coins,
+  security: Shield,
+  system: Megaphone,
+  promo: Gift,
+  update: Rocket,
 };
 
 const bottomNav = [
@@ -116,7 +117,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-heading font-bold text-foreground">🔔 Notifications</h3>
+              <h3 className="text-sm font-heading font-bold text-foreground flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-primary" /> Notifications
+              </h3>
               <button onClick={() => setShowNotifs(false)} className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
@@ -142,8 +145,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                   )}
                 >
                   <div className="flex items-start gap-2.5">
-                    <div className="relative">
-                      <span className="text-sm mt-0.5">{typeEmoji[n.type] || "📢"}</span>
+                    <div className="relative w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      {(() => {
+                        const Icon = typeIcons[n.type] || Megaphone;
+                        return <Icon className="w-4 h-4 text-primary" />;
+                      })()}
                       {!n.is_read && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-card" />
                       )}
@@ -178,8 +184,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           <div className="relative w-full max-w-sm shadow-neu rounded-2xl bg-card p-5 space-y-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg">
-                  {typeEmoji[selectedNotif.type] || "📢"}
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  {(() => {
+                    const Icon = typeIcons[selectedNotif.type] || Megaphone;
+                    return <Icon className="w-5 h-5 text-primary" />;
+                  })()}
                 </div>
                 <div>
                   <p className="text-sm font-heading font-bold text-foreground">{selectedNotif.title}</p>

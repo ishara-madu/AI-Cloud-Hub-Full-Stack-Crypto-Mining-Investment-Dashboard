@@ -106,7 +106,7 @@ const AdminUsers = () => {
     await supabase.from("profiles").update({ is_frozen: false }).eq("user_id", userId);
     await supabase.from("notifications").insert({
       user_id: userId, type: "security",
-      title: "Account Unfrozen ✅",
+      title: "Account Unfrozen",
       description: "Your account has been unfrozen. You can now use all features normally.",
     });
     toast.success("Account unfrozen");

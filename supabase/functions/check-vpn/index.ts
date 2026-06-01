@@ -19,20 +19,23 @@ serve(async (req) => {
     if (!ip) {
       return new Response(
         JSON.stringify({ is_vpn: false, error: "No IP provided" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const response = await fetch(
       `http://ip-api.com/json/${ip}?fields=status,proxy,hosting,query`,
-      { headers: { Accept: "application/json" } }
+      { headers: { Accept: "application/json" } },
     );
 
     if (!response.ok) {
       console.error("ip-api error:", response.status);
       return new Response(
-        JSON.stringify({ is_vpn: false, error: "Detection service unavailable" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          is_vpn: false,
+          error: "Detection service unavailable",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -40,15 +43,14 @@ serve(async (req) => {
     // proxy = true means VPN/proxy; hosting = true means datacenter/server IP
     const isVpn = data.proxy === true || data.hosting === true;
 
-    return new Response(
-      JSON.stringify({ is_vpn: isVpn, ip: data.query }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ is_vpn: isVpn, ip: data.query }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("VPN check error:", error);
     return new Response(
       JSON.stringify({ is_vpn: false, error: "Internal error" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
