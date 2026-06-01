@@ -108,49 +108,49 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner closeButton />
-      <VpnGuard>
       <AuthProvider>
         <BrowserRouter>
-          <PageTitleUpdater />
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsAndConditions />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
-            <Route path="/deposit" element={<ProtectedPage><Deposit /></ProtectedPage>} />
-            <Route path="/withdraw" element={<ProtectedPage><Withdraw /></ProtectedPage>} />
-            <Route path="/packages" element={<ProtectedPage><Packages /></ProtectedPage>} />
-            <Route path="/transactions" element={<ProtectedPage><Transactions /></ProtectedPage>} />
-            <Route path="/team" element={<ProtectedPage><Team /></ProtectedPage>} />
-            <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
-            <Route path="/daily-signin" element={<ProtectedPage><DailySignIn /></ProtectedPage>} />
-            <Route path="/about" element={<ProtectedPage><About /></ProtectedPage>} />
-            <Route path="/redeem" element={<ProtectedPage><Redeem /></ProtectedPage>} />
-            <Route path="/notifications" element={<ProtectedPage><Notifications /></ProtectedPage>} />
-            <Route path="/bank-info" element={<ProtectedPage><BankInfo /></ProtectedPage>} />
-            <Route path="/commission-details" element={<ProtectedPage><CommissionDetails /></ProtectedPage>} />
-            <Route path="/earned-history" element={<ProtectedPage><EarnedHistory /></ProtectedPage>} />
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
-            <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
-            <Route path="/admin/deposits" element={<AdminPage><AdminDeposits /></AdminPage>} />
-            <Route path="/admin/withdrawals" element={<AdminPage><AdminWithdrawals /></AdminPage>} />
-            <Route path="/admin/packages" element={<AdminPage><AdminPackages /></AdminPage>} />
-            <Route path="/admin/redeem-codes" element={<AdminPage><AdminRedeemCodes /></AdminPage>} />
-            <Route path="/admin/sliders" element={<AdminPage><AdminSliders /></AdminPage>} />
-            <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
-            <Route path="/admin/user-packages" element={<AdminPage><AdminUserPackages /></AdminPage>} />
-            <Route path="/admin/alerts" element={<AdminPage><AdminAlerts /></AdminPage>} />
-            <Route path="/admin/users/:userId" element={<AdminPage><AdminUserDetail /></AdminPage>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <VpnGuard>
+            <PageTitleUpdater />
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsAndConditions />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
+              <Route path="/deposit" element={<ProtectedPage><Deposit /></ProtectedPage>} />
+              <Route path="/withdraw" element={<ProtectedPage><Withdraw /></ProtectedPage>} />
+              <Route path="/packages" element={<ProtectedPage><Packages /></ProtectedPage>} />
+              <Route path="/transactions" element={<ProtectedPage><Transactions /></ProtectedPage>} />
+              <Route path="/team" element={<ProtectedPage><Team /></ProtectedPage>} />
+              <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
+              <Route path="/daily-signin" element={<ProtectedPage><DailySignIn /></ProtectedPage>} />
+              <Route path="/about" element={<ProtectedPage><About /></ProtectedPage>} />
+              <Route path="/redeem" element={<ProtectedPage><Redeem /></ProtectedPage>} />
+              <Route path="/notifications" element={<ProtectedPage><Notifications /></ProtectedPage>} />
+              <Route path="/bank-info" element={<ProtectedPage><BankInfo /></ProtectedPage>} />
+              <Route path="/commission-details" element={<ProtectedPage><CommissionDetails /></ProtectedPage>} />
+              <Route path="/earned-history" element={<ProtectedPage><EarnedHistory /></ProtectedPage>} />
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
+              <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
+              <Route path="/admin/deposits" element={<AdminPage><AdminDeposits /></AdminPage>} />
+              <Route path="/admin/withdrawals" element={<AdminPage><AdminWithdrawals /></AdminPage>} />
+              <Route path="/admin/packages" element={<AdminPage><AdminPackages /></AdminPage>} />
+              <Route path="/admin/redeem-codes" element={<AdminPage><AdminRedeemCodes /></AdminPage>} />
+              <Route path="/admin/sliders" element={<AdminPage><AdminSliders /></AdminPage>} />
+              <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
+              <Route path="/admin/user-packages" element={<AdminPage><AdminUserPackages /></AdminPage>} />
+              <Route path="/admin/alerts" element={<AdminPage><AdminAlerts /></AdminPage>} />
+              <Route path="/admin/users/:userId" element={<AdminPage><AdminUserDetail /></AdminPage>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </VpnGuard>
         </BrowserRouter>
       </AuthProvider>
-      </VpnGuard>
     </TooltipProvider>
   </QueryClientProvider>
 );
