@@ -895,6 +895,7 @@ const Dashboard = () => {
           <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
             {packages.map((pkg, idx) => {
               const isComingSoon = !pkg.is_active;
+              const isAlreadyActive = userPackages.some((up) => up.package_id === pkg.id);
               const price = pkg.price_onetime || pkg.price_monthly || 0;
               const cashbackAmt = pkg.cashback_percent
                 ? Math.round((price * pkg.cashback_percent) / 100)
@@ -980,6 +981,14 @@ const Dashboard = () => {
                       <span className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg block text-center">
                         Coming soon
                       </span>
+                    ) : isAlreadyActive ? (
+                      <Button
+                        size="sm"
+                        disabled={true}
+                        className="w-full rounded-xl bg-muted text-muted-foreground border border-border text-xs h-9 font-semibold cursor-not-allowed shadow-none"
+                      >
+                        Active
+                      </Button>
                     ) : (
                       <Link to="/packages">
                         <Button

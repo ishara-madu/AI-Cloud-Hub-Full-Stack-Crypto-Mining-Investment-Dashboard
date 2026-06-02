@@ -50,12 +50,12 @@ interface CryptoPaymentDetails {
 }
 
 const SUPPORTED_COINS = [
+  { id: "trx", name: "TRON (TRX)", description: "TRON network coin" },
   {
     id: "usdttrc20",
     name: "USDT (TRC20)",
     description: "Tether on TRON network (Low fee)",
   },
-  { id: "trx", name: "TRON (TRX)", description: "TRON network coin" },
   { id: "btc", name: "Bitcoin (BTC)", description: "Bitcoin network" },
   { id: "eth", name: "Ethereum (ETH)", description: "Ethereum network" },
   { id: "ltc", name: "Litecoin (LTC)", description: "Litecoin network" },
@@ -90,6 +90,14 @@ const Deposit = () => {
   } | null>(null);
   const [fetchingMin, setFetchingMin] = useState(false);
   const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
+
+  const apiMinimumLimit = (selectedMethod === "crypto_nowpayments" && minDepositInfo)
+    ? minDepositInfo.rs_equivalent
+    : 0;
+  const effectiveMinimum = Math.max(500, apiMinimumLimit);
+  const effectiveMinCrypto = (minDepositInfo && minDepositInfo.rs_equivalent > 0)
+    ? (minDepositInfo.min_amount * (effectiveMinimum / minDepositInfo.rs_equivalent))
+    : 0;
 
   // Play a short sweet chime: C5 -> E5 -> G5
   const playSuccessSound = () => {
@@ -368,21 +376,20 @@ const Deposit = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(amount);
-    if (!amt || amt < 500) {
-      toast.error("Minimum deposit is Rs 500");
-      return;
-    }
     if (!user) return;
     setLoading(true);
 
-    if (selectedMethod === "crypto_nowpayments") {
-      if (minDepositInfo && amt < minDepositInfo.rs_equivalent) {
-        toast.error(
-          `The deposit amount is below the minimum required limit of Rs ${minDepositInfo.rs_equivalent.toLocaleString()}`,
-        );
-        setLoading(false);
-        return;
+    if (!amt || amt < effectiveMinimum) {
+      if (effectiveMinimum === 500) {
+        toast.error("The minimum deposit is 500");
+      } else {
+        toast.error(`The minimum deposit for this network is higher, it is ${effectiveMinimum.toLocaleString()}`);
       }
+      setLoading(false);
+      return;
+    }
+
+    if (selectedMethod === "crypto_nowpayments") {
       try {
         const { data, error } = await supabase.functions.invoke(
           "create-nowpayments-invoice",
@@ -906,10 +913,10 @@ const Deposit = () => {
                       <span>
                         Minimum Limit:{" "}
                         <strong className="text-primary">
-                          {minDepositInfo.min_amount}{" "}
+                          {Number(effectiveMinCrypto.toFixed(6))}{" "}
                           {minDepositInfo.pay_currency.toUpperCase()}
                         </strong>{" "}
-                        (~Rs {minDepositInfo.rs_equivalent.toLocaleString()})
+                        (~Rs {effectiveMinimum.toLocaleString()})
                       </span>
                     ) : (
                       <span className="text-destructive">
