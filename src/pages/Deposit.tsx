@@ -99,6 +99,10 @@ const Deposit = () => {
     ? (minDepositInfo.min_amount * (effectiveMinimum / minDepositInfo.rs_equivalent))
     : 0;
 
+  const amtNum = parseFloat(amount);
+  const isBelowMinimum = !!amount && (!amtNum || amtNum < effectiveMinimum);
+  const isSubmitDisabled = loading || uploading || fetchingMin || isBelowMinimum;
+
   // Play a short sweet chime: C5 -> E5 -> G5
   const playSuccessSound = () => {
     try {
@@ -379,14 +383,59 @@ const Deposit = () => {
     if (!user) return;
     setLoading(true);
 
-    if (!amt || amt < effectiveMinimum) {
-      if (effectiveMinimum === 500) {
-        toast.error("The minimum deposit is 500");
-      } else {
-        toast.error(`The minimum deposit for this network is higher, it is ${effectiveMinimum.toLocaleString()}`);
+    if (selectedMethod === "crypto_nowpayments") {
+      let currentMinInfo = minDepositInfo;
+      if (!currentMinInfo || fetchingMin) {
+        try {
+          const { data, error } = await supabase.functions.invoke(
+            "create-nowpayments-invoice",
+            {
+              body: { pay_currency: selectedCoin, action: "get_min_amount" },
+            },
+          );
+          if (!error && data && !data.error) {
+            currentMinInfo = {
+              min_amount: data.min_amount,
+              rs_equivalent: data.rs_equivalent,
+              pay_currency: selectedCoin,
+            };
+            setMinDepositInfo(currentMinInfo);
+          }
+        } catch (err) {
+          console.error("Error fetching min amount:", err);
+        }
       }
-      setLoading(false);
-      return;
+
+      if (!currentMinInfo) {
+        toast.error("Could not fetch minimum deposit limits. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Convert Fiat (LKR/Rs) to Crypto equivalent
+      const cryptoRate = currentMinInfo.min_amount / currentMinInfo.rs_equivalent;
+      const convertedCrypto = amt * cryptoRate;
+
+      // Determine effective minimums
+      const apiMinLimitInFiat = currentMinInfo.rs_equivalent;
+      const effMinInFiat = Math.max(500, apiMinLimitInFiat);
+
+      // Perform validation check
+      if (amt < effMinInFiat || convertedCrypto < currentMinInfo.min_amount) {
+        if (effMinInFiat === 500) {
+          toast.error("The minimum deposit is 500");
+        } else {
+          toast.error(`The minimum deposit for this network is higher, it is ${effMinInFiat.toLocaleString()}`);
+        }
+        setLoading(false);
+        return;
+      }
+    } else {
+      if (!amt || amt < 500) {
+        toast.error("The minimum deposit is 500");
+        setLoading(false);
+        return;
+      }
     }
 
     if (selectedMethod === "crypto_nowpayments") {
@@ -986,7 +1035,7 @@ const Deposit = () => {
               <Button
                 type="submit"
                 className="w-full rounded-xl h-12 gradient-primary text-primary-foreground font-semibold text-base"
-                disabled={loading || uploading}
+                disabled={isSubmitDisabled}
               >
                 {(loading || uploading) && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
