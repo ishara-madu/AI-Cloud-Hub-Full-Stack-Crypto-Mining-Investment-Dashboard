@@ -57,8 +57,8 @@ const Register = () => {
     setLoading(false);
     if (error) { toast.error(error.message); } else {
       if (data.user) await logDeviceAdvanced(data.user.id, "signup", supabase);
-      toast.success("Account created! Check your email to verify.");
-      navigate("/login");
+      toast.success("Account created successfully!");
+      navigate("/dashboard");
     }
   };
 
