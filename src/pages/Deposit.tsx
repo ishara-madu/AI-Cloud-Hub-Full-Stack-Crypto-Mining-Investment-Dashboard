@@ -80,7 +80,7 @@ const Deposit = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string>("bank_transfer");
   const [methodsLoaded, setMethodsLoaded] = useState(false);
-  const [selectedCoin, setSelectedCoin] = useState("usdttrc20");
+  const [selectedCoin, setSelectedCoin] = useState("trx");
   const [cryptoPaymentDetails, setCryptoPaymentDetails] =
     useState<CryptoPaymentDetails | null>(null);
   const [minDepositInfo, setMinDepositInfo] = useState<{
