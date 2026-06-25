@@ -1,73 +1,93 @@
-# Welcome to your Lovable project
+# AI Cloud Hub (Crypto Investment Platform)
 
-## Project info
+AI Cloud Hub is a web-based cryptocurrency mining & package investment platform. Users can buy investment packages, claim daily login rewards, manage referral structures, and make deposits/withdrawals. The project includes a robust administrative panel for platform management and AI-driven insights.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech Stack
+* **Frontend**: React (v18), Vite, TypeScript, Tailwind CSS, shadcn-ui
+* **Backend & Database**: Supabase (Database, Auth, Row-Level Security, Edge Functions)
+* **Integrations**: NowPayments (Cryptocurrency Payment Gateway), Google Gemini API (AI-driven admin insights)
+* **Package Manager**: `pnpm` (indicated by `pnpm-lock.yaml`)
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## Getting Started
 
-**Use Lovable**
+Follow these instructions to set up the project locally.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Prerequisites
+* **Node.js** (v18 or higher)
+* **pnpm** (installed globally: `npm install -g pnpm`)
+* **Supabase CLI** (optional, but recommended for local Edge Function testing)
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### 1. Clone & Install Dependencies
+Clone the repository, navigate into the project directory, and install dependencies using `pnpm`:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# Clone repository
 git clone <YOUR_GIT_URL>
+cd aicloudhub
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Install packages
+pnpm install
 ```
 
-**Edit a file directly in GitHub**
+### 2. Configure Environment Variables
+Create or verify the `.env` file in the root directory and ensure the following keys are set:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```env
+VITE_SUPABASE_PROJECT_ID="your_supabase_project_id"
+VITE_SUPABASE_URL="https://your_supabase_project_id.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="your_supabase_anon_key"
+```
 
-**Use GitHub Codespaces**
+### 3. Setup Supabase Database
+This project contains database tables, RLS policies, trigger functions, and seed data in the [supabase/migrations](file:///Users/ishara/Documents/aicloudhub/supabase/migrations) folder.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+To apply migrations easily:
+1. **Combine Migrations**: Run the pre-configured script to compile all migrations chronologically into a single file:
+   ```sh
+   pnpm run supabase:combine
+   ```
+   This generates the consolidated script at [supabase/combined_migrations.sql](file:///Users/ishara/Documents/aicloudhub/supabase/combined_migrations.sql).
+2. **Apply Script**: Copy the contents of `combined_migrations.sql` and run it in the **SQL Editor** of your Supabase Dashboard.
 
-## What technologies are used for this project?
+### 4. Setup Supabase Edge Functions & Secrets
+This project utilizes five Supabase Edge Functions under [supabase/functions](file:///Users/ishara/Documents/aicloudhub/supabase/functions):
+* `admin-ai-insights` - Uses Gemini API for AI dashboards.
+* `create-nowpayments-invoice` - Generates payment invoices with NowPayments API.
+* `nowpayments-webhook` - Processes cryptocurrency deposit updates.
+* `delete-user` - Handles user accounts deletion securely.
+* `check-vpn` - Fraud prevention.
 
-This project is built with:
+#### Required Secrets in Supabase
+Set the following secrets in your Supabase project (Dashboard > Settings > API > Edge Function Secrets, or via Supabase CLI):
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```sh
+# Set secrets via Supabase CLI
+supabase secrets set GEMINI_API_KEY="your_gemini_api_key"
+supabase secrets set NOWPAYMENTS_API_KEY="your_nowpayments_merchant_api_key"
+supabase secrets set NOWPAYMENTS_IPN_SECRET="your_nowpayments_ipn_signature_secret"
+```
 
-## How can I deploy this project?
+To deploy the functions, use the Supabase CLI:
+```sh
+supabase functions deploy --project-ref your_supabase_project_id
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+### 5. Running Locally
+Run the development server locally:
 
-## Can I connect a custom domain to my Lovable project?
+```sh
+pnpm dev
+```
 
-Yes, you can!
+By default, the server will start on [http://localhost:8080](http://localhost:8080).
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Lovable Development Workflows
+
+Changes made via Lovable will be committed automatically to this repository. If you choose to push changes directly from your preferred IDE:
+1. Clone this repo and push changes. Pushed changes will be reflected in Lovable.
+2. Deployment can be executed by opening [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and selecting **Share > Publish**.
+
